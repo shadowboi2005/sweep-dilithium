@@ -99,7 +99,9 @@ def cmd_map(a):
                 covered.add(id(r))
                 out.append({**base, "kind": "matched", "ir_index": idx, "ir_inst": inst, "fault": r["fault"],
                             "test": r["test"], "ir_detected": r["detected"], "mc_detected": f[r["test"]],
-                            "agree": _agree(r["detected"], f[r["test"]]), "ir_detail": r["detail"],
+                            "own_function": "yes" if f["function"] == ir_fn else "no",
+                            "agree": (_agree(r["detected"], f[r["test"]])
+                                      if f["function"] == ir_fn and _decided(f, r["test"]) else "-"), "ir_detail": r["detail"],
                             "mc_detail": f[f"{r['test']}_detail"]})
         if not hit:
             out.append({**base, "kind": "machine_only", "ir_index": ";".join(map(str, idxs)),
@@ -115,7 +117,7 @@ def cmd_map(a):
                         "ir_detail": r["detail"], "match": why})
 
     cols = ["kind", "swept_function", "pc", "asm", "ir_function", "ir_index", "ir_inst", "match", "fault",
-            "test", "ir_detected", "mc_detected", "agree", "fired", "mc_ineffective", "mc_correction",
+            "test", "ir_detected", "mc_detected", "own_function", "agree", "fired", "mc_ineffective", "mc_correction",
             "mc_direct_leak", "ir_detail", "mc_detail"]
     os.makedirs(a.out, exist_ok=True)
     with open(os.path.join(a.out, "correlation.csv"), "w", newline="") as fh:
@@ -131,9 +133,10 @@ def cmd_map(a):
         ms = [f for f in at if f["function"] == r["function"]]
         other = [f for f in at if f["function"] != r["function"]]
         n_det = sum(f[r["test"]] == "yes" for f in ms)
+        n_decided = sum(_decided(f, r["test"]) for f in ms)
         if n_det:
             mc_any = "yes"
-        elif any(_decided(f, r["test"]) for f in ms):
+        elif n_decided:
             mc_any = "no"
         elif ms:
             mc_any = "not executed" if all(f["fired"] == "0" for f in ms) else "undecided"
@@ -143,7 +146,7 @@ def cmd_map(a):
             mc_any = "inlined only" if other else "unmapped"
         rr.append({"function": r["function"], "fault": r["fault"], "family": r["family"], "model": r["model"],
                    "test": r["test"], "ir_index": r["ir_index"], "ir_detected": r["detected"], "n_pcs": len(ms),
-                   "n_pcs_detected": n_det, "pcs": " ".join(f["pc"] for f in ms), "mc_any": mc_any,
+                   "n_pcs_decided": n_decided, "n_pcs_detected": n_det, "pcs": " ".join(f["pc"] for f in ms), "mc_any": mc_any,
                    "agree": _agree(r["detected"], mc_any), "n_inlined_pcs": len(other),
                    "n_inlined_detected": sum(f[r["test"]] == "yes" for f in other)})
     with open(os.path.join(a.out, "report_rows.csv"), "w", newline="") as fh:
@@ -209,7 +212,7 @@ def cmd_timing(a):
         for label, t in ours:
             o = t.get(fn, {})
             r[f"{label}_status"] = o.get("status", "")
-            for k in ("seconds", "cpu_seconds", "elapsed_seconds", "n_pcs", "trials", "emu_insns"):
+            for k in ("seconds", "cpu_seconds", "n_pcs", "trials", "emu_insns"):
                 r[f"{label}_{k}"] = o.get(k, "")
             if o.get("seconds") and o.get("n_pcs"):
                 r[f"{label}_seconds_per_pc"] = round(float(o["seconds"]) / int(o["n_pcs"]), 3)
@@ -248,12 +251,16 @@ def _score(pairs):
 
 def cmd_stats(a):
     """Report-row agreement of each build, next to trivial baselines."""
+    os.makedirs(a.out, exist_ok=True)
     out = []
     for d in a.dirs:
         label = os.path.basename(os.path.abspath(d))
         rows = list(csv.DictReader(open(os.path.join(d, "report_rows.csv"), newline="")))
         faults = list(csv.DictReader(open(os.path.join(d, "machine_faults.csv"), newline="")))
         dec = [r for r in rows if r["agree"] in ("yes", "no")]
+        if not dec:
+            print(f"{label}: no comparable rows")
+            continue
         sets = {"all rows": dec, "call skips (fnSkip)": [r for r in dec if r["model"] == "fnSkip"],
                 "value faults": [r for r in dec if r["model"] != "fnSkip"],
                 "without *uniform*": [r for r in dec if "uniform" not in r["function"]]}
@@ -266,27 +273,29 @@ def cmd_stats(a):
             site[r["function"], r["ir_index"], r["test"]].add((r["ir_detected"], r["mc_any"]))
         out.append({"build": label, "set": "IR sites",
                     **_score([(max(i for i, _ in v), max(m for _, m in v)) for v in site.values()])})
-        # null: as many random executed PCs of the same function instead of the mapped ones
+        # null: as many random PCs of the same function instead of the mapped ones,
+        # out of those that count for the observed rows (executed, not only crashes)
         by_fn = defaultdict(list)
         for f in faults:
-            by_fn[f["function"]].append(f)
+            if _decided(f, "ineffective"):
+                by_fn[f["function"]].append(f)
         rng, agree, kappa = random.Random(0), [], []
         groups = defaultdict(list)
         for r in dec:
-            groups[r["function"], r["pcs"], int(r["n_pcs"])].append(r)
+            groups[r["function"], r["pcs"], int(r["n_pcs_decided"])].append(r)
         for _ in range(a.draws):
             pairs = []
-            for (fn, _, n), rs in groups.items():
+            for (fn, _, n), rs in groups.items():  # one draw for all tests of a site, as observed
                 pick = rng.sample(by_fn[fn], min(n, len(by_fn[fn])))
                 pairs += [(r["ir_detected"], "yes" if any(f[r["test"]] == "yes" for f in pick) else "no") for r in rs]
             s = _score(pairs)
             agree.append(s["agree"])
-            kappa.append(s["kappa"])
+            kappa.append(s["kappa"] if s["kappa"] != "" else 0.0)
         obs = _score([(r["ir_detected"], r["mc_any"]) for r in dec])
         out.append({"build": label, "set": f"random PCs of the same function (mean of {a.draws})", "n": obs["n"],
                     "agree": round(sum(agree) / len(agree), 1), "kappa": round(sum(kappa) / len(kappa), 3),
                     "p_agree": round(sum(x >= obs["agree"] for x in agree) / len(agree), 4),
-                    "p_kappa": round(sum(x >= obs["kappa"] for x in kappa) / len(kappa), 4)})
+                    "p_kappa": round(sum(x >= (obs["kappa"] or 0.0) for x in kappa) / len(kappa), 4)})
         yes = [r for r in rows if r["ir_detected"] == "yes"]
         out.append({"build": label, "set": "all IR yes rows", "n": len(yes), "tp": sum(r["mc_any"] == "yes" for r in yes),
                     **{"mc_" + k.replace(" ", "_"): v for k, v in Counter(r["mc_any"] for r in yes).items()}})

@@ -84,7 +84,7 @@ def _golden(task):
     c = _CTX
     w = h.inputs("collect", p, c["bg_field_mod"], c["active"], (c["secret"], c["secret_pos"], c["sweep"][idx]),
                  f"eph:{j}")
-    t0, c0 = time.perf_counter(), time.process_time()
+    t0, c0 = time.perf_counter(), time.thread_time()
     try:
         rec = h.run(w, restore=True)
         out = ("ok", rec)
@@ -92,7 +92,7 @@ def _golden(task):
         out = ("timeout", str(e))
     except EmulationError as e:
         out = ("fail", str(e))
-    return task, out, time.perf_counter() - t0, time.process_time() - c0
+    return task, out, time.perf_counter() - t0, time.thread_time() - c0
 
 
 # --- one instruction ----------------------------------------------------------------
@@ -108,10 +108,16 @@ def _dir(p, j):
 def _pc(task):
     fn, pc, asm = task
     h = _use(fn)
-    c = _CTX
-    m = h.m
-    skip = Skip(m, pc, c["it_ends"].get(pc))
-    t0, c0, i0 = time.perf_counter(), time.process_time(), m.icount
+    skip = Skip(h.m, pc, _CTX["it_blocks"].get(pc))
+    try:
+        return _sweep_pc(h, skip, pc, asm)
+    finally:
+        skip.detach()
+
+
+def _sweep_pc(h, skip, pc, asm):
+    c, m = _CTX, h.m
+    t0, c0, i0 = time.perf_counter(), time.thread_time(), m.icount
     sweep = T.EarlyStopSweep(c["seeds"], c["n_eph"], c["n_words"], c["diff_mode"])
     dirs = defaultdict(list)
     trials = fired = crash = sv_seen = sv_skipped = 0
@@ -162,13 +168,12 @@ def _pc(task):
             pairs, dl = _fallback_pairs(h, skip)
     if dl is None:
         dl = T.direct_leak(c["secret"], c["eph"], pairs)
-    skip.detach()
     return {"function": c["fn"], "pc": pc, "asm": asm, "fired": fired, "trials": trials,
             "sv_examined": sv_seen, "sv_skipped": sv_skipped, "crash": crash, "timeout": int(bool(timeout)),
             "ineffective": ine[0], "ineffective_detail": ine[1],
             "correction": cor[0], "correction_detail": cor[1],
             "direct_leak": dl[0], "direct_leak_detail": dl[1], "n_trace_pairs": len(pairs),
-            "seconds": round(time.perf_counter() - t0, 3), "cpu_seconds": round(time.process_time() - c0, 3),
+            "seconds": round(time.perf_counter() - t0, 3), "cpu_seconds": round(time.thread_time() - c0, 3),
             "emu_insns": m.icount - i0}
 
 
@@ -218,14 +223,15 @@ def setup_function(a, module, cfg, fn):
             raise ValueError(f"eph_secret {e!r} not in layout")
     m = Machine(a.elf)
     h = QI.Harness(m, module, fn, layout, fixed, eph, a.trial_timeout)
-    t0, c0 = time.perf_counter(), time.process_time()
+    t0, c0 = time.perf_counter(), time.thread_time()
     active = QI.load_active_lengths(a.witness_dir, fn)
     cal_failed = {}
     if active is None:
         active, cal_failed = QI.calibrate(h, a.field_mod)
-    t_cal = (time.perf_counter() - t0, time.process_time() - c0)
-    if active.get(secret, 1) <= a.secret_pos and layout[secret].get("type") != "scalar":
-        raise ValueError(f"secret-buf {secret!r} has active length {active[secret]}: "
+    t_cal = (time.perf_counter() - t0, time.thread_time() - c0)
+    n_active = active.get(secret)  # None: not calibrated, the whole buffer is filled
+    if n_active is not None and n_active <= a.secret_pos and layout[secret].get("type") != "scalar":
+        raise ValueError(f"secret-buf {secret!r} has active length {n_active}: "
                          "no secret value would ever reach the function")
     out_buf, active_len, ws, dm, _ = QI.derive_all(layout, secret, a.field_mod)
     sdist = layout[secret].get("distribution")
@@ -235,7 +241,7 @@ def setup_function(a, module, cfg, fn):
                 secret_pos=a.secret_pos, trial_timeout=a.trial_timeout, active=active, out_buf=out_buf,
                 word_size=ws, diff_mode=dm, n_words=active_len // ws, sweep=list(sweep),
                 bg_field_mod=QI.infer_field_mod(sdist), seeds=a.seeds, n_eph=n_eph,
-                it_ends=emu.it_block_ends(m.function_insns(fn)),
+                it_blocks=emu.it_blocks(m.function_insns(fn)),
                 grid=[(p, j) for p in a.seeds for j in range(n_eph)], traces=a.traces,
                 info={"layout_source": source, "layout": layout, "active_lengths": active,
                       "calibration_failed": cal_failed, "out_buf": out_buf, "active_len": active_len,
@@ -277,7 +283,8 @@ def main(argv=None):
         h.update(hashlib.sha256(open(p, "rb").read()).digest())
     key = json.dumps({"content": h.hexdigest(), "unicorn": unicorn.__version__, "capstone": capstone.__version__,
                       "seeds": a.seeds, "eph": a.eph_draws, "field_mod": a.field_mod, "pos": a.secret_pos,
-                      "traces": a.traces, "trial_timeout": a.trial_timeout}, sort_keys=True)
+                      "traces": a.traces, "trial_timeout": a.trial_timeout,
+                      "caller": os.environ.get("MBC_PREFER_CALLER")}, sort_keys=True)
     t_gold = {}  # fn -> [wall, cpu] seconds of its unfaulted runs
     ck_path = os.path.join(a.out, "checkpoint.jsonl")
     done = {}

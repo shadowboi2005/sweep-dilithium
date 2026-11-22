@@ -24,9 +24,9 @@ def program(**functions):
     return m
 
 
-def run(m, func, args, skip_at=None, it_end=None):
+def run(m, func, args, skip_at=None, it_block=None):
     """(return value, times the skip fired); offsets are relative to CODE."""
-    skip = None if skip_at is None else Skip(m, CODE + skip_at, it_end and CODE + it_end)
+    skip = None if skip_at is None else Skip(m, CODE + skip_at, it_block and tuple(CODE + o for o in it_block))
     m.restore_memory()
     r0 = m.call(func, args)
     if skip is None:

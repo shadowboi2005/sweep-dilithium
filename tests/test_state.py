@@ -3,7 +3,7 @@ import unittest
 
 from support import program
 
-from emu import EmulationError
+from emu import EmulationError, EmulationTimeout
 
 # cmp r0,#0; itttt ne; ldrne r3,[r1]; movne r0,#1 (x3); bx lr
 CRASH = [0x2800, 0xBF1F, 0x680B, 0x2001, 0x2001, 0x2001, 0x4770]
@@ -24,6 +24,16 @@ class StateTest(unittest.TestCase):
         with self.assertRaises(EmulationError):
             m.call("crash", [1, 0x60000000])
         self.assertEqual(m.call("add5", [0]), 5)
+
+    def test_early_stop_is_not_a_timeout(self):
+        m = program(wfi=[0xBF30, 0x4770])
+        with self.assertRaises(EmulationError):
+            m.call("wfi", timeout_s=5)
+
+    def test_runaway_is_a_timeout(self):
+        m = program(spin=[0xE7FE])
+        with self.assertRaises(EmulationTimeout):
+            m.call("spin", timeout_s=0.2)
 
     def test_memory(self):
         m = program(add5=ADD5)

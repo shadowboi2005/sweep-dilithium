@@ -263,7 +263,7 @@ class Machine:
                 uc.emu_stop()
                 return
             uc.reg_write(A.UC_ARM_REG_R0, 0)  # other semihosting calls: ignored
-            uc.reg_write(A.UC_ARM_REG_PC, pc + 2)
+            uc.reg_write(A.UC_ARM_REG_PC, (pc + 2) | 1)
             return
         self._halt = f"cpu exception {intno} at {pc:#x}"
         uc.emu_stop()
@@ -320,6 +320,10 @@ class Machine:
 
         def handler(m, address, size):
             buf, n = m.reg("r0"), m.reg("r1")
+            if n > SRAM.size:  # a runaway call; no buffer is that large
+                m._halt = f"randombytes of {n:#x} bytes"
+                m.uc.emu_stop()
+                return
             m.write(buf, stream.read(n))
             m.set_reg("r0", 0)
             m.set_reg("pc", m.reg("lr") | 1)
@@ -329,7 +333,7 @@ class Machine:
         return stream
 
     # execution
-    def call(self, func, args=(), max_instructions=0, timeout_s=0.0, stack_size=0x40000):
+    def call(self, func, args=(), timeout_s=0.0, stack_size=0x40000):
         """AAPCS call of `func`; returns r0.  Raises EmulationError on a guest
         fault and EmulationTimeout if it does not return within the caps."""
         # Every call starts from the CPU state before the first one (registers,
@@ -359,13 +363,13 @@ class Machine:
         try:
             if skip is not None:
                 skip.begin()
-            self.uc.emu_start(addr | 1, ret, timeout=int(timeout_s * 1e6), count=max_instructions)
+            self.uc.emu_start(addr | 1, ret, timeout=int(timeout_s * 1e6))
             if skip is not None and skip.resume_at is not None and self._halt is None:
                 # an IT-block member was replaced by a NOP for one execution: put it back and go on
                 at = skip.resume_at
                 skip.end()
                 left = max(t_end - time.perf_counter(), 1e-3) if timeout_s else 0
-                self.uc.emu_start(at | 1, ret, timeout=int(left * 1e6), count=max_instructions)
+                self.uc.emu_start(at | 1, ret, timeout=int(left * 1e6))
         except UcError as exc:
             raise EmulationError(f"{self._halt or exc} at {self.image.describe(self.reg('pc'))}") from None
         finally:
@@ -374,6 +378,8 @@ class Machine:
         if self._halt is not None:
             raise EmulationError(self._halt)
         if self.reg("pc") & ~1 != ret:
+            if timeout_s and time.perf_counter() < t_end - 0.01 * timeout_s:
+                raise EmulationError(f"stopped at {self.image.describe(self.reg('pc') & ~1)}")  # e.g. wfi
             raise EmulationTimeout(f"{func} did not return (pc={self.image.describe(self.reg('pc') & ~1)})")
         return self.reg("r0")
 
@@ -401,16 +407,20 @@ class Skip:
     Outside IT blocks the hook moves PC past the instruction.  Unicorn ignores
     that for an instruction inside an IT block, so there the bytes are a NOP
     (under the same condition) until it has executed once; the machine then
-    stops at the end of the block, puts the bytes back and resumes."""
+    stops at the end of the block (or back at its IT instruction, if the block
+    was left by a branch), puts the bytes back and resumes.
 
-    def __init__(self, machine, pc, it_end=None):
-        self.machine, self.pc, self.it_end = machine, pc, it_end
+    `it_block` is (address of the IT instruction, address after the block)."""
+
+    def __init__(self, machine, pc, it_block=None):
+        machine.restore_memory()  # the last trial may have overwritten the code read below
+        self.machine, self.pc, self.it_block = machine, pc, it_block
         self.size = machine.disasm_one(pc)[1] or 2
         self.hits = self.fired = 0
         self.resume_at = self._orig = None
         self._handles = [machine.hook_code(self._on_pc, pc, pc)]
-        if it_end is not None:
-            self._handles.append(machine.hook_code(self._on_it_end, it_end, it_end))
+        for addr in it_block or ():
+            self._handles.append(machine.hook_code(self._on_it_edge, addr, addr))
         machine._skip = self
 
     def reset(self):
@@ -421,7 +431,7 @@ class Skip:
 
     def begin(self):
         self.resume_at = None
-        if self.it_end is not None and self.hits == 0:
+        if self.it_block is not None and self.hits == 0:
             self._orig = self.machine.read(self.pc, self.size)
             self.machine.write(self.pc, b"\x00\xbf" if self.size == 2 else b"\xaf\xf3\x00\x80")
             self.machine.uc.ctl_flush_tb()
@@ -436,10 +446,10 @@ class Skip:
         self.hits += 1
         if self.hits == 1:
             self.fired += 1
-            if self.it_end is None:
+            if self.it_block is None:
                 m.set_reg("pc", (addr + self.size) | 1)
 
-    def _on_it_end(self, m, addr, size):
+    def _on_it_edge(self, m, addr, size):
         if self._orig is not None and self.fired:
             self.resume_at = addr
             m.uc.emu_stop()
@@ -451,17 +461,17 @@ class Skip:
         self.machine._skip = None
 
 
-def it_block_ends(insns):
-    """{pc: address after the IT block} for every member of an IT block in
-    function_insns() output."""
-    ends = {}
-    for i, (_, _, asm) in enumerate(insns):
+def it_blocks(insns):
+    """{pc: (address of the IT instruction, address after the block)} for every
+    member of an IT block in function_insns() output."""
+    blocks = {}
+    for i, (it_pc, _, asm) in enumerate(insns):
         op = asm.split()[0]
         if re.fullmatch(r"it[te]{0,3}", op):
-            block = insns[i + 1:i + len(op)]
-            for pc, _, _ in block:
-                ends[pc] = block[-1][0] + block[-1][1]
-    return ends
+            members = insns[i + 1:i + len(op)]
+            end = members[-1][0] + members[-1][1]
+            blocks.update((pc, (it_pc, end)) for pc, _, _ in members)
+    return blocks
 
 
 class _Xof:
