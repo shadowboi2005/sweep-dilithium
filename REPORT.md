@@ -3,12 +3,20 @@
 Dilithium2, Cortex-M4 code under Unicorn. Every machine instruction of 31 functions is skipped once (first execution) and scored with QEMU-test's three tests. The search uses no IR-fault information. The verdicts are then joined with `data/fault_report_dilithium.csv` through DWARF. Figures come from the CSVs in `results/` unless stated. "Controls" are experiments by the second review (`reviews/REVIEW_BIAS_2.md`), on stated subsets and the same sweep code apart from the fixes listed under History.
 
 ## Summary
-1. **At -O0, skipped calls carry over.** 29 of 30 IR-positive call-skip rows reproduce; random instructions do clearly worse (66 of 70 rows agree, against 50 to 54). Skipping a `bl` is the same fault as removing the call, so this mostly checks the pipeline. The 30th is a set-up mismatch (`poly_ntt`, below).
-2. **At -Os and -O3 the call-skip agreement (17/20, 11/12) is not evidence:** random instructions of the same functions do about as well.
-3. **Skipping an instruction does not reproduce what the IR value faults found.** The sweep only skips instructions and never injects a value fault (see "What is injected"), so this does not show that value faults fail at machine level. Agreement is below always answering "no" in all three builds (69, 84 and 73 of 95, against 85), and the mapped instructions do no better than one random instruction of the function (81.7, 81.1 and 81.9 on average; only Os is above, within chance). Only 4, 2 and 2 of the 10 IR-positive rows reproduce. Those 10 rows are 4 sites in 3 functions, so the rates themselves are very uncertain.
-4. **Overall agreement (82%, 88%, 79%) is weak evidence.** Always "no" scores 76%, 81% and 84%. Of the 40 IR-positive rows in swept functions, 33, 13 and 8 reproduce.
-5. **Which operand a skip leaves behind depends on the compiled code.** Skipping the `add` of `poly_add` leaves `a` at -O0 and the secret `b` at -Os.
-6. **The counts of detected instructions are not counts of vulnerabilities.** Many detections occur without any secret, or depend on zeroed registers (Limits).
+**Question: does an IR fault translate to a real machine fault?** An IR finding translates if skipping a machine instruction compiled from its IR instruction is detected by the same test. There are 40 IR findings (a fault and a test with verdict "yes") in the swept functions.
+
+| | O0 | Os | O3 |
+|---|---|---|---|
+| **translate** | **33 of 40 (82%)** | **13 of 40 (32%)** | **8 of 40 (20%)** |
+| … with the same witness as the IR report | 30 of 33 | 10 of 13 | 7 of 8 |
+| do not translate | 7 | 9 | 9 |
+| no machine instruction left to skip | 0 | 18 | 23 |
+
+1. **Without optimisation, most IR findings show up as machine faults.** (Emulated: no hardware was used.) 30 of the 33 have exactly the same witness (position, secret values, alpha) as the IR report, so the skip has the same effect, not only the same verdict.
+2. **Call skips translate almost completely at -O0: 29 of 30.** The other one (`poly_ntt`) is a set-up mismatch.
+3. **Optimisation removes many of them.** At Os and O3, 18 and 23 of the 40 have no machine instruction left, all of them call skips. Of the call skips that are left, 11 of 12 and 6 of 7 translate.
+4. **IR value faults translate less: 4, 2 and 2 of 10.** The simulation only skips instructions, so these rows ask whether a skip has the same effect as a different fault (see "What is injected"). They are 4 instructions in 3 functions.
+5. **The compiler decides which operand a skip leaves.** Skipping the `add` of `poly_add` leaves `a` at -O0 and the secret `b` at -Os.
 
 ## Builds
 | build | how |
@@ -35,7 +43,7 @@ The IR study has several fault types. In this report, a **call skip** is a repor
 - **`opA` and `opB` change an operand, not the result.** For `a + b` they give `a` and `b`, for `a - b` they give `a` and `-b`, and for `a * b` both give 0, the same as `zero`.
 - **The compiler decides what a skipped computation leaves.** If the destination register held `a`, skipping `a + b` acts like `opA`; if it held `b`, like `opB`; otherwise like neither. The `poly_add` case below shows both.
 - **One skip is compared with up to four models.** They share the same machine instructions and can have different verdicts, so some rows must disagree.
-- **What follows.** Agreement on call-skip rows compares like with like. Agreement on value-fault rows asks whether a skip *stands in for* a value fault. Whether the value faults themselves survive compilation would need injecting them: for `opA`, `opB` and `zero`, overwriting the destination register with the value the model gives; for a load, writing 0. `undef` has no machine value. This was not done.
+- **What follows.** Call-skip rows compare like with like. Value-fault rows ask whether a skip *stands in for* a value fault. Whether the value faults themselves survive compilation would need injecting them: for `opA`, `opB` and `zero`, overwriting the destination register with the value the model gives; for a load, writing 0. `undef` has no machine value. This was not done.
 
 ## What the skips find
 | build | instructions | never executed | crashed on every secret value | ineffective | correction | direct_leak | any test | of which in `*uniform*` |
@@ -55,47 +63,74 @@ The IR study has several fault types. In this report, a **call skip** is a repor
 - The 15 hits at Os and 236 at O3 are the same 7 IR sites and one unmapped group. 3 and 74 of them leak the ephemeral secret, not the main one.
 - Outside `signature_internal`, the IR study has direct_leak rows for `poly_add` only (7).
 
-## Agreement with the IR report
-An IR "yes" row is reproduced if any instruction of the row's own function that maps to its IR instruction is detected. An IR "no" row agrees if none is. Rows of `signature_internal` (150), rows with no mapped instruction, and rows whose instructions never ran are left out. `results/stats.csv` has every set.
+## Do the IR findings translate?
+A finding translates if any instruction of the same function that maps to its IR instruction is detected by the same test. "–" means that no machine instruction maps to it. `results/<build>/report_rows.csv` has every row. The 53 IR findings in `signature_internal` are not included, because it was not swept.
 
 | | O0 | Os | O3 |
 |---|---|---|---|
-| rows compared | 165 | 115 | 107 |
-| agree | 135 (82%) | 101 (88%) | 84 (79%) |
-| always "no" | 125 (76%) | 93 (81%) | 90 (84%) |
-| as many random instructions of the function (mean agreement) | 135.7 | 97.9 | 51.9 |
-| one random instruction per row (mean agreement) | 131.8 | 94.9 | 92.7 |
-| precision / recall | 0.59 / 0.83 | 0.72 / 0.59 | 0.36 / 0.47 |
-| kappa | 0.56 | 0.58 | 0.28 |
-| IR "yes" rows reproduced, of the 40 in swept functions | 33 | 13 | 8 |
-| of those 40, no mapped instruction | 0 | 18 | 23 |
-| (IR site, test) units that agree | 86 / 96 | 37 / 46 | 29 / 38 |
+| call skips (30) | 29 yes, 1 no | 11 yes, 1 no, 18 – | 6 yes, 1 no, 23 – |
+| value faults (10) | 4 yes, 6 no | 2 yes, 8 no | 2 yes, 8 no |
+| ineffective (24) | 20 yes, 4 no | 6 yes, 6 no, 12 – | 3 yes, 6 no, 15 – |
+| correction (14) | 13 yes, 1 no | 5 yes, 3 no, 6 – | 4 yes, 2 no, 8 – |
+| direct_leak (2) | 0 yes, 2 no | 2 yes | 1 yes, 1 no |
+| distinct IR faults (29), in at least one test | 22 | 8 | 5 |
+| functions with an IR finding (21), at least one translates | 20 | 7 | 5 |
 
-At O3 the "as many random instructions" baseline is so low because a row maps to up to about 200 instructions and any "yes" counts. With one random instruction per row, random choice agrees more often than the mapped instructions.
+**Every finding**
 
-**By fault type**
+| function | IR fault | test | O0 | Os | O3 |
+|---|---|---|---|---|---|
+| `poly_caddq` | call to `caddq` | ineffective | **yes** | – | – |
+| `poly_decompose` | call to `decompose` | correction | **yes** | – | – |
+| `poly_make_hint` | call to `make_hint` | correction | **yes** | – | – |
+| `poly_make_hint` | call to `make_hint` | ineffective | **yes** | – | – |
+| `poly_ntt` | call to `ntt` | ineffective | no | no | no |
+| `poly_pointwise_montgomery` | call to `montgomery_reduce` | ineffective | **yes** | – | – |
+| `poly_uniform` | call to `dilithium_shake128_stream_init` | ineffective | **yes** | **yes** | – |
+| `poly_uniform` | call to `shake128_squeezeblocks` | ineffective | **yes** | – | – |
+| `poly_uniform_eta` | call to `rej_eta` | correction | **yes** | **yes** | – |
+| `poly_uniform_eta` | call to `rej_eta` | ineffective | **yes** | **yes** | – |
+| `poly_uniform_gamma1` | call to `dilithium_shake256_stream_init` | correction | **yes** | **yes** | – |
+| `poly_uniform_gamma1` | call to `dilithium_shake256_stream_init` | ineffective | **yes** | **yes** | – |
+| `poly_uniform_gamma1` | call to `shake256_squeezeblocks` | correction | **yes** | – | – |
+| `poly_uniform_gamma1` | call to `shake256_squeezeblocks` | ineffective | **yes** | – | – |
+| `polyveck_caddq` | call to `poly_caddq` | ineffective | **yes** | – | – |
+| `polyveck_decompose` | call to `poly_decompose` | correction | **yes** | – | – |
+| `polyveck_decompose` | call to `poly_decompose` | ineffective | **yes** | – | – |
+| `polyveck_pointwise_poly_montgomery` | call to `poly_pointwise_montgomery` | ineffective | **yes** | – | – |
+| `polyveck_reduce` | call to `poly_reduce` | ineffective | **yes** | – | – |
+| `polyveck_shiftl` | call to `poly_shiftl` | correction | **yes** | – | – |
+| `polyveck_shiftl` | call to `poly_shiftl` | ineffective | **yes** | – | – |
+| `polyveck_uniform_eta` | call to `poly_uniform_eta` | correction | **yes** | **yes** | **yes** |
+| `polyveck_uniform_eta` | call to `poly_uniform_eta` | ineffective | **yes** | **yes** | **yes** |
+| `polyvecl_add` | call to `poly_add` | correction | **yes** | – | – |
+| `polyvecl_pointwise_acc_montgomery` | call to `poly_pointwise_montgomery` | ineffective | **yes** | – | – |
+| `polyvecl_pointwise_poly_montgomery` | call to `poly_pointwise_montgomery` | ineffective | **yes** | – | – |
+| `polyvecl_uniform_eta` | call to `poly_uniform_eta` | correction | **yes** | **yes** | **yes** |
+| `polyvecl_uniform_eta` | call to `poly_uniform_eta` | ineffective | **yes** | **yes** | **yes** |
+| `polyvecl_uniform_gamma1` | call to `poly_uniform_gamma1` | correction | **yes** | **yes** | **yes** |
+| `polyvecl_uniform_gamma1` | call to `poly_uniform_gamma1` | ineffective | **yes** | **yes** | **yes** |
+| `poly_add` | `mem`, line 5 | direct_leak | no | **yes** | no |
+| `poly_add` | `opA`, line 8 | correction | **yes** | no | no |
+| `poly_add` | `opB`, line 8 | direct_leak | no | **yes** | **yes** |
+| `poly_add` | `opA`, line 8 | ineffective | **yes** | no | no |
+| `poly_pointwise_montgomery` | `undef`, line 10 | correction | no | no | **yes** |
+| `poly_pointwise_montgomery` | `opA`, line 10 | ineffective | no | no | no |
+| `poly_pointwise_montgomery` | `opB`, line 10 | ineffective | no | no | no |
+| `poly_pointwise_montgomery` | `zero`, line 10 | ineffective | no | no | no |
+| `poly_sub` | `opA`, line 8 | correction | **yes** | no | no |
+| `poly_sub` | `opA`, line 8 | ineffective | **yes** | no | no |
 
-| | O0 | Os | O3 |
-|---|---|---|---|
-| call skips: agree | 66 / 70 | 17 / 20 | 11 / 12 |
-| … always "no" | 40 | 8 | 5 |
-| … random, as many / one (mean) | 53.9 / 50.2 | 17.1 / 13.9 | 11.0 / 10.8 |
-| … IR "yes" reproduced | 29 / 30 | 11 / 12 | 6 / 7 |
-| value faults: agree | 69 / 95 | 84 / 95 | 73 / 95 |
-| … always "no" | 85 | 85 | 85 |
-| … random, as many / one (mean) | 81.8 / 81.7 | 80.7 / 81.1 | 40.8 / 81.9 |
-| … IR "yes" reproduced | 4 / 10 | 2 / 10 | 2 / 10 |
-| without `*uniform*`: agree (always "no") | 119 / 147 (121) | 89 / 101 (90) | 78 / 101 (90) |
-| direct_leak (7 rows): IR "yes" reproduced | 0 / 2 | 2 / 2 | 1 / 2 |
+- **What is left at Os and O3 is mostly in the `*uniform*` functions:** 11 of 13 and 6 of 8 (14 of 33 at O0). There the tests also fire on unrelated outputs (Limits), so these are weaker evidence of an exploitable fault.
+- **The three O0 translations with another witness** are `poly_decompose` (another alpha) and the two of `poly_uniform_eta` (another position).
 
-- **Reproduced means the same thing.** For 30 of the 33 O0 rows the witness (position, secret values, alpha) is identical to the IR report's, and all 29 reproduced call skips hit at the `bl` itself (second review).
-- **At Os and O3 every reproduced call skip is in a `*uniform*` function.** At O0, 15 of the 29 are elsewhere.
-- **IR "no", machine "yes" at O0 (23 rows).** 8 are one `add` in `invntt_tomont` (line 25), where the skip leaves `a[j+len]`, which is what IR `opB` should give, yet the IR report says "no". This conflict is **unexplained**. 6 are the other models at the one `poly_add` instruction below, 6 the same in `poly_sub`, and the other 3 are in `poly_decompose` and `poly_uniform_eta`.
-- **Rows are not independent.** `opA`, `opB`, `undef` and `zero` at one instruction share the same machine instructions.
+**The findings that do not translate at O0**
+- `poly_ntt`: the IR row has a witness (s1=12, position 916) that is impossible with the config's 5-value secret. Treating the secret as bytes reproduces it exactly, so that row was made with other settings. The same change turns `polyveck_ntt` and `polyvecl_ntt` to "yes", where the IR report says "no".
+- `poly_pointwise_montgomery` line 10 (4 rows): the IR faults zero the product or an operand; the skipped `smull r0, r1, r0, r1` leaves the two operands in the registers of the product.
+- `poly_add` line 8, `opB`: the skipped `add` leaves `a`, not the secret `b`.
+- `poly_add` line 5, `mem`: the IR fault loads 0, so `b` is stored. The skipped load leaves the address of `a` in the register instead.
 
-**`poly_add` line 8.** At O0 the skipped `add r1, r3` leaves `a[i]` in `r1`, which is stored, like the IR model `opA`. At Os, skipping `add r3, ip` leaves `b[i]`, like `opB`, so the secret leaks directly and the `opA` verdicts do not reproduce. No single skip can match all four models.
-
-**`poly_ntt`.** The IR row has a witness (s1=12, position 916) that is impossible with the config's 5-value secret. Treating the secret as bytes reproduces it exactly, so that row was made with other settings. The same change turns `polyveck_ntt` and `polyvecl_ntt` to "yes", where the IR report says "no".
+**`poly_add` line 8.** At O0 the skipped `add r1, r3` leaves `a[i]` in `r1`, which is stored, like the IR model `opA`. At Os, skipping `add r3, ip` leaves `b[i]`, like `opB`, so the secret leaks directly and the `opA` findings do not translate. No single skip can match all four models.
 
 ## Time
 | | IR-level | O0 | Os | Os_clang | O3 |
@@ -151,13 +186,15 @@ The full set of columns is in `results/timing_compare.csv`.
 - **The tests fire without a secret** (controls). Fed unrelated outputs, ineffective fires in 10 of 10 runs for the six `*uniform*` functions, both `*decompose` functions and `poly_make_hint`. Correction does so with real unrelated outputs for five of the six `*uniform*` functions, but only 0–2 of 10 for `poly_uniform`. With no secret planted, 55% (O0), 51% (Os), 61% (Os_clang) and 44% (O3) of the correction hits remain. Sweeping a public input instead of the secret triggers ineffective about as often. QEMU-test has the same property.
 - **Initial state.** Registers, stack and output buffers start at zero. With random registers and stack, 34 of 156 re-run O0 detections and 21 of 188 at Os disappear, 5 of the 15 Os leaks among them, and one of the two value-fault rows reproduced at Os (controls).
 - **One position, one execution.** Only the secret's first coefficient and the first execution are tested. Outside `*uniform*`, with the secret at two other positions, 62 and 64 instructions are found at O0 instead of 82, and 64 and 67 at Os instead of 123. In half of O3 it is 332 and 254 instead of 334 (controls).
+- **Unexplained conflict.** Skipping one `add` in `invntt_tomont` (line 25) leaves `a[j+len]`, which is what IR `opB` should give. The skip is detected, but the IR report says "no" for all models there (8 rows).
+- **Scope of the question.** The report counts whether each IR finding shows up. It does not measure whether the effect is specific to that instruction; other instructions of the function are often detected too (`results/stats.csv`).
 - **First output only.** Only the first output buffer is compared. Ineffective compares raw values, not values mod q.
-- **No held-out data.** The tool was developed with the IR report in hand, on one scheme and parameter set. An earlier version with other inputs agreed on 93 of 167 rows.
+- **No held-out data.** The tool was developed with the IR report in hand, on one scheme and parameter set.
 - **Layouts are rebuilt,** because the witness files are not available.
 - **Timeouts are wall-clock.** The 4 at O3 are all `pop` instructions in `*uniform*` functions.
 - **Not run:** QEMU-test's generated `main()`, `signature_internal`, hardware counters, real hardware.
 
 ## History
 Two rounds of independent reviews by AI agents are in `reviews/`.
-- **Round 1** found that skips inside IT blocks did nothing, that register and memory state leaked between trials, that report rows counted instructions tested under another function's inputs, and that `open` was vacuous. After the fixes everything was re-run: detections gained and lost were 3/3 (O0), 19/0 (Os), 8/1 (Os_clang) and 47/4 (O3). Agreement went from 137/167 to 135/165 (O0), 97/115 to 101/115 (Os) and 82/107 to 84/107 (O3).
-- **Round 2** found that a skip could use a wrong instruction size after a trial that overwrote code, and that this report's reading of direct_leak and of the O3 baseline was misleading. After the fix everything was re-run: **no verdict changed in any build.** 3 O0 rows and 1 Os_clang row changed in `emu_insns` only, and so did the 4 O3 timeouts. The wording above is corrected. A later fix to `emu_insns` (a counter only) is not reflected in the CSVs.
+- **Round 1** found that skips inside IT blocks did nothing, that register and memory state leaked between trials, that report rows counted instructions tested under another function's inputs, and that `open` was vacuous. After the fixes everything was re-run: detections gained and lost were 3/3 (O0), 19/0 (Os), 8/1 (Os_clang) and 47/4 (O3). The IR findings that translate did not change at O0 (33), and went from 17 to 13 at Os and from 14 to 8 at O3, mainly because instructions inlined into other functions no longer count.
+- **Round 2** found that a skip could use a wrong instruction size after a trial that overwrote code, and that this report's reading of direct_leak and of a baseline was misleading. After the fix everything was re-run: **no verdict changed in any build.** 3 O0 rows and 1 Os_clang row changed in `emu_insns` only, and so did the 4 O3 timeouts. The wording above is corrected. A later fix to `emu_insns` (a counter only) is not reflected in the CSVs.
