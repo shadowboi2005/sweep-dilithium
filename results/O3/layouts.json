@@ -1,0 +1,1197 @@
+{
+ "pqcrystals_dilithium2_ref_poly_add": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "c": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "a": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "b": {
+    "role": "input",
+    "length": 1024,
+    "_root": "alloca:[256 x i32] via pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   }
+  },
+  "active_lengths": {
+   "a": 1024,
+   "b": 1024
+  },
+  "calibration_failed": {},
+  "out_buf": "c",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_add": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "w": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal"
+   },
+   "u": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "c*s1, coefficients bounded by beta"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "masking vector y, uniform in (-gamma1, gamma1]"
+   }
+  },
+  "active_lengths": {
+   "u": 4096,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "w",
+  "active_len": 4096,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 157,
+  "secret_distribution": "c*s1, coefficients bounded by beta",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 4
+ },
+ "pqcrystals_dilithium2_ref_poly_ntt": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 1024,
+    "_root": "alloca:[256 x i32] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "uniform in [-eta, eta]",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "a": 1024
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 1024,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 5,
+  "secret_distribution": "uniform in [-eta, eta]",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_invntt_tomont": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_poly_invntt_tomont",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "a": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_ntt": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 1024,
+    "_root": "alloca:[256 x i32] via pqcrystals_dilithium2_ref_poly_ntt",
+    "distribution": "uniform in [-eta, eta]",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "a": 1024
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 1024,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 5,
+  "secret_distribution": "uniform in [-eta, eta]",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_open": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "m": {
+    "role": "output",
+    "length": 2479,
+    "_root": "alloca:[2479 x i8] via main",
+    "distribution": "message"
+   },
+   "mlen": {
+    "role": "input",
+    "length": 4,
+    "type": "scalar_ptr",
+    "init_value": 59,
+    "_root": "alloca:i32 via main"
+   },
+   "sm": {
+    "role": "input",
+    "length": 2479,
+    "_root": "alloca:[2479 x i8] via main",
+    "distribution": "signed_message"
+   },
+   "smlen": {
+    "role": "input",
+    "type": "scalar",
+    "length": 4,
+    "init_value": 2479,
+    "_signext": false
+   },
+   "ctx": {
+    "role": "input",
+    "length": 14,
+    "_root": "alloca:[14 x i8] via main"
+   },
+   "ctxlen": {
+    "role": "input",
+    "type": "scalar",
+    "length": 4,
+    "init_value": 14,
+    "_signext": false
+   },
+   "pk": {
+    "role": "input",
+    "length": 1312,
+    "_root": "alloca:[1312 x i8] via main",
+    "distribution": "public_key"
+   }
+  },
+  "active_lengths": {
+   "mlen": 4,
+   "sm": 0,
+   "smlen": 4,
+   "ctx": 14,
+   "ctxlen": 4,
+   "pk": 0
+  },
+  "calibration_failed": {},
+  "out_buf": "m",
+  "active_len": 2479,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": "signed_message",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_caddq": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_caddq",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "a": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_decompose": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a1": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_decompose",
+    "distribution": "high bits w1, coefficients in [0, (q-1)/(2*gamma2))"
+   },
+   "a0": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_decompose",
+    "distribution": "low bits w0, coefficients bounded by gamma2"
+   },
+   "a": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_decompose",
+    "distribution": "r_q = z_q[x]/(x^n + 1), coefficient domain"
+   }
+  },
+  "active_lengths": {
+   "a": 1024
+  },
+  "calibration_failed": {},
+  "out_buf": "a1",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), coefficient domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_invntt_tomont": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_invntt_tomont",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "a": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_make_hint": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "h": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_make_hint",
+    "distribution": "hint polynomial, 0/1 coefficients"
+   },
+   "a0": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_make_hint",
+    "distribution": "low bits w0, coefficients bounded by gamma2"
+   },
+   "a1": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_make_hint",
+    "distribution": "high bits w1, coefficients in [0, (q-1)/(2*gamma2))"
+   }
+  },
+  "active_lengths": {
+   "a0": 1023,
+   "a1": 0
+  },
+  "calibration_failed": {},
+  "out_buf": "h",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "low bits w0, coefficients bounded by gamma2",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_pointwise_montgomery": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "c": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain"
+   },
+   "a": {
+    "role": "input",
+    "length": 16384,
+    "_root": "alloca:[4 x [4 x [256 x i32]]] via pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   },
+   "b": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   }
+  },
+  "active_lengths": {
+   "a": 1024,
+   "b": 1024
+  },
+  "calibration_failed": {},
+  "out_buf": "c",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), ntt domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_sub": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "c": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_sub",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "a": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_sub",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "b": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyveck_sub",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   }
+  },
+  "active_lengths": {
+   "a": 1024,
+   "b": 1024
+  },
+  "calibration_failed": {},
+  "out_buf": "c",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_uniform": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 16384,
+    "_root": "alloca:[4 x [4 x [256 x i32]]] via pqcrystals_dilithium2_ref_polyvec_matrix_expand",
+    "distribution": "uniform"
+   },
+   "seed": {
+    "role": "input",
+    "length": 128,
+    "_root": "alloca:[128 x i8] via pqcrystals_dilithium2_ref_polyvec_matrix_expand"
+   },
+   "nonce": {
+    "role": "input",
+    "type": "scalar",
+    "length": 2,
+    "init_value": 0,
+    "_signext": false
+   }
+  },
+  "active_lengths": {
+   "seed": 128,
+   "nonce": 2
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 16384,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": null,
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_uniform_eta": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_uniform_eta",
+    "distribution": "eta"
+   },
+   "seed": {
+    "role": "input",
+    "length": 128,
+    "_root": "alloca:[128 x i8] via pqcrystals_dilithium2_ref_polyvecl_uniform_eta"
+   },
+   "nonce": {
+    "role": "input",
+    "type": "scalar",
+    "length": 2,
+    "init_value": 0,
+    "_signext": false
+   }
+  },
+  "active_lengths": {
+   "seed": 128,
+   "nonce": 2
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 4096,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": null,
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_poly_uniform_gamma1": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "a": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvecl_uniform_gamma1",
+    "distribution": "gamma1"
+   },
+   "seed": {
+    "role": "input",
+    "length": 256,
+    "_root": "alloca:[256 x i8] via pqcrystals_dilithium2_ref_polyvecl_uniform_gamma1"
+   },
+   "nonce": {
+    "role": "input",
+    "type": "scalar",
+    "length": 2,
+    "init_value": 0,
+    "_signext": false
+   }
+  },
+  "active_lengths": {
+   "seed": 64,
+   "nonce": 2
+  },
+  "calibration_failed": {},
+  "out_buf": "a",
+  "active_len": 4096,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": null,
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "t": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain"
+   },
+   "mat": {
+    "role": "input",
+    "length": 16384,
+    "_root": "alloca:[4 x [4 x [256 x i32]]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "uniform polynomial matrix in r_q"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   }
+  },
+  "active_lengths": {
+   "mat": 16384,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "t",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), ntt domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_add": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "w": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "u": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   }
+  },
+  "active_lengths": {
+   "u": 4096,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "w",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 4
+ },
+ "pqcrystals_dilithium2_ref_polyveck_caddq": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_decompose": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v1": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "high bits w1, coefficients in [0, (q-1)/(2*gamma2))"
+   },
+   "v0": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "low bits w0, coefficients bounded by gamma2"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), coefficient domain"
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v1",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), coefficient domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_invntt_tomont": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_ntt": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "uniform in [-eta, eta]",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 5,
+  "secret_distribution": "uniform in [-eta, eta]",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_pointwise_poly_montgomery": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "r": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain"
+   },
+   "a": {
+    "role": "input",
+    "length": 1024,
+    "_root": "alloca:[256 x i32] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   }
+  },
+  "active_lengths": {
+   "a": 1024,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "r",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), ntt domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_reduce": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_shiftl": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_verify_internal",
+    "distribution": "t1, coefficients in [0, 2^10)",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4095
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "t1, coefficients in [0, 2^10)",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyveck_sub": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "w": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "u": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients"
+   }
+  },
+  "active_lengths": {
+   "u": 4096,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "w",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), reduced coefficients",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 4
+ },
+ "pqcrystals_dilithium2_ref_polyveck_uniform_eta": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "eta"
+   },
+   "seed": {
+    "role": "input",
+    "length": 128,
+    "_root": "alloca:[128 x i8] via pqcrystals_dilithium2_ref_keypair"
+   },
+   "nonce": {
+    "role": "input",
+    "type": "scalar",
+    "length": 2,
+    "init_value": 8,
+    "_signext": false
+   }
+  },
+  "active_lengths": {
+   "seed": 128,
+   "nonce": 2
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": null,
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_invntt_tomont": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_ntt": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "uniform in [-eta, eta]",
+    "also_input": true
+   }
+  },
+  "active_lengths": {
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 5,
+  "secret_distribution": "uniform in [-eta, eta]",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "w": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain"
+   },
+   "u": {
+    "role": "input",
+    "length": 16384,
+    "_root": "alloca:[4 x [4 x [256 x i32]]] via pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery",
+    "distribution": "uniform polynomial matrix in r_q"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   }
+  },
+  "active_lengths": {
+   "u": 4096,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "w",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), ntt domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_pointwise_poly_montgomery": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "r": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), montgomery domain"
+   },
+   "a": {
+    "role": "input",
+    "length": 1024,
+    "_root": "alloca:[256 x i32] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   },
+   "v": {
+    "role": "input",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "r_q = z_q[x]/(x^n + 1), ntt domain"
+   }
+  },
+  "active_lengths": {
+   "a": 1024,
+   "v": 4096
+  },
+  "calibration_failed": {},
+  "out_buf": "r",
+  "active_len": 4096,
+  "word_size": 4,
+  "diff_mode": "mod-sub",
+  "n_secret_values": 256,
+  "secret_distribution": "r_q = z_q[x]/(x^n + 1), ntt domain",
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_uniform_eta": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_keypair",
+    "distribution": "eta"
+   },
+   "seed": {
+    "role": "input",
+    "length": 128,
+    "_root": "alloca:[128 x i8] via pqcrystals_dilithium2_ref_keypair"
+   },
+   "nonce": {
+    "role": "input",
+    "type": "scalar",
+    "length": 2,
+    "init_value": 4,
+    "_signext": false
+   }
+  },
+  "active_lengths": {
+   "seed": 128,
+   "nonce": 2
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": null,
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ },
+ "pqcrystals_dilithium2_ref_polyvecl_uniform_gamma1": {
+  "layout_source": "rebuilt from IR + function_inputs",
+  "layout": {
+   "v": {
+    "role": "output",
+    "length": 4096,
+    "_root": "alloca:[4 x [256 x i32]] via pqcrystals_dilithium2_ref_signature_internal",
+    "distribution": "gamma1"
+   },
+   "seed": {
+    "role": "input",
+    "length": 256,
+    "_root": "alloca:[256 x i8] via pqcrystals_dilithium2_ref_signature_internal"
+   },
+   "nonce": {
+    "role": "input",
+    "type": "scalar",
+    "length": 2,
+    "init_value": 0,
+    "_signext": false
+   }
+  },
+  "active_lengths": {
+   "seed": 64,
+   "nonce": 2
+  },
+  "calibration_failed": {},
+  "out_buf": "v",
+  "active_len": 4096,
+  "word_size": 1,
+  "diff_mode": "xor",
+  "n_secret_values": 256,
+  "secret_distribution": null,
+  "seeds": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "eph_draws": 1
+ }
+}

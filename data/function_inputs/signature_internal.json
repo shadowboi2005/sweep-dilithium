@@ -1,0 +1,10 @@
+{"output":"sig","sig":111,"siglen":2420,"m":3,"mlen":59,"pre":0,"prelen":16,"rnd":150,"sk":162,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":145,"siglen":2420,"m":65,"mlen":59,"pre":0,"prelen":16,"rnd":251,"sk":16,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":8,"siglen":2420,"m":230,"mlen":59,"pre":0,"prelen":16,"rnd":209,"sk":218,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":103,"siglen":2420,"m":65,"mlen":59,"pre":0,"prelen":16,"rnd":196,"sk":50,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":136,"siglen":2420,"m":46,"mlen":59,"pre":0,"prelen":16,"rnd":115,"sk":159,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":149,"siglen":2420,"m":14,"mlen":59,"pre":0,"prelen":16,"rnd":245,"sk":106,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":25,"siglen":2420,"m":181,"mlen":59,"pre":0,"prelen":16,"rnd":183,"sk":213,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":192,"siglen":2420,"m":57,"mlen":59,"pre":0,"prelen":16,"rnd":87,"sk":34,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":251,"siglen":2420,"m":128,"mlen":59,"pre":0,"prelen":16,"rnd":45,"sk":132,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}
+{"output":"sig","sig":11,"siglen":2420,"m":177,"mlen":59,"pre":0,"prelen":16,"rnd":105,"sk":154,"distribution":{"rnd":"random_bytes","sk":"secret_key","sig":"signature"}}

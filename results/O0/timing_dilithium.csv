@@ -1,0 +1,39 @@
+function,status,seconds,cpu_seconds,calibration_seconds,golden_seconds,n_pcs,trials,emu_insns,jobs
+keccak_absorb,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/keccak_absorb.json',,,,,,,,
+pqcrystals_dilithium2_ref_decompose,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/decompose.json',,,,,,,,
+pqcrystals_dilithium2_ref_power2round,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/power2round.json',,,,,,,,
+pqcrystals_dilithium2_ref_polyveck_chknorm,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/polyveck_chknorm.json',,,,,,,,
+pqcrystals_dilithium2_ref_polyvecl_chknorm,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/polyvecl_chknorm.json',,,,,,,,
+pqcrystals_dilithium2_ref_unpack_sk,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/unpack_sk.json',,,,,,,,
+pqcrystals_dilithium2_ref_poly_add,ok,37.623,41.429,0.112,0.0,25,22538,83308760,32
+pqcrystals_dilithium2_ref_polyvecl_add,ok,346.915,391.985,0.329,0.0,27,46505,1863068347,32
+pqcrystals_dilithium2_ref_poly_ntt,ok,0.347,0.368,0.164,0.0,3,30,1132786,32
+pqcrystals_dilithium2_ref_invntt_tomont,ok,1226.834,1439.01,0.253,0.0,109,99350,6061645450,32
+pqcrystals_dilithium2_ref_ntt,ok,46.599,53.177,0.165,0.0,86,1573,292169113,32
+pqcrystals_dilithium2_ref_open,ok,1441.641,1692.014,0.492,0.0,79,77056,5822314064,32
+pqcrystals_dilithium2_ref_poly_caddq,ok,38.408,43.102,0.066,0.0,24,19204,121988519,32
+pqcrystals_dilithium2_ref_poly_decompose,ok,35.661,40.186,0.051,0.0,28,16548,164477133,32
+pqcrystals_dilithium2_ref_poly_invntt_tomont,ok,5.844,6.507,0.253,0.0,3,1536,34576384,32
+pqcrystals_dilithium2_ref_poly_make_hint,ok,71.831,81.217,0.169,0.0,37,27680,269820593,32
+pqcrystals_dilithium2_ref_poly_pointwise_montgomery,ok,53.94,60.5,0.241,0.0,29,23559,184034458,32
+pqcrystals_dilithium2_ref_poly_sub,ok,36.563,40.812,0.105,0.0,25,23050,87774424,32
+pqcrystals_dilithium2_ref_poly_uniform,ok,1599.292,1828.794,0.0,0.0,83,81152,23598029087,32
+pqcrystals_dilithium2_ref_poly_uniform_eta,ok,847.78,956.249,0.0,8.661,42,24468,15388821342,32
+pqcrystals_dilithium2_ref_poly_uniform_gamma1,ok,734.509,827.359,0.091,12.524,16,3400,13672661747,32
+pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery,ok,4015.108,4543.712,1.501,48.109,26,20481,21646280440,32
+pqcrystals_dilithium2_ref_polyveck_add,ok,972.101,1098.963,0.237,18.226,27,79873,3085777159,32
+pqcrystals_dilithium2_ref_polyveck_caddq,ok,726.729,823.98,0.124,7.373,21,15615,3033990373,32
+pqcrystals_dilithium2_ref_polyveck_decompose,ok,999.043,1131.273,0.14,9.417,27,17789,5655795742,32
+pqcrystals_dilithium2_ref_polyveck_invntt_tomont,ok,4112.34,4647.917,0.649,51.034,21,16214,32493322419,32
+pqcrystals_dilithium2_ref_polyveck_ntt,ok,81.429,91.616,0.543,0.596,21,345,401883998,32
+pqcrystals_dilithium2_ref_polyveck_pointwise_poly_montgomery,ok,760.309,860.358,0.248,8.04,26,21248,4252596851,32
+pqcrystals_dilithium2_ref_polyveck_reduce,ok,955.414,1080.963,0.121,8.568,21,15615,3035516959,32
+pqcrystals_dilithium2_ref_polyveck_shiftl,ok,502.59,569.584,0.082,5.237,21,10280,1656265127,32
+pqcrystals_dilithium2_ref_polyveck_sub,ok,862.868,976.064,0.234,20.211,27,79873,3086855278,32
+pqcrystals_dilithium2_ref_polyveck_uniform_eta,ok,2064.77,2329.706,0.0,26.035,31,11132,27502480393,32
+pqcrystals_dilithium2_ref_polyvecl_invntt_tomont,ok,4026.998,4550.405,0.647,54.402,21,15446,32257950261,32
+pqcrystals_dilithium2_ref_polyvecl_ntt,ok,77.366,87.728,0.545,0.626,21,330,397108817,32
+pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery,ok,1141.88,1292.985,0.515,11.939,32,26624,5791283864,32
+pqcrystals_dilithium2_ref_polyvecl_pointwise_poly_montgomery,ok,995.6,1126.536,0.247,8.296,26,20480,4222024691,32
+pqcrystals_dilithium2_ref_polyvecl_uniform_eta,ok,2274.663,2565.451,0.0,25.881,31,11128,27529375985,32
+pqcrystals_dilithium2_ref_polyvecl_uniform_gamma1,ok,3867.45,4369.765,0.328,42.251,27,16176,81405744322,32
