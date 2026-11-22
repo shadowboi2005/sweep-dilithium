@@ -5,7 +5,7 @@ Dilithium2, Cortex-M4 code under Unicorn. Every machine instruction of 31 functi
 ## Summary
 1. **At -O0, skipped calls carry over.** 29 of 30 IR-positive call-skip rows reproduce; random instructions do clearly worse (66 of 70 rows agree, against 50 to 54). Skipping a `bl` is the same fault as removing the call, so this mostly checks the pipeline. The 30th is a set-up mismatch (`poly_ntt`, below).
 2. **At -Os and -O3 the call-skip agreement (17/20, 11/12) is not evidence:** random instructions of the same functions do about as well.
-3. **Value faults show no correspondence.** Agreement is below always answering "no" in all three builds (69, 84 and 73 of 95, against 85), and the mapped instructions do no better than one random instruction of the function (81.7, 81.1 and 81.9 on average; only Os is above, within chance). Only 4, 2 and 2 of the 10 IR-positive rows reproduce. Those 10 rows are 4 sites in 3 functions, so the rates themselves are very uncertain.
+3. **Skipping an instruction does not reproduce what the IR value faults found.** The sweep only skips instructions and never injects a value fault (see "What is injected"), so this does not show that value faults fail at machine level. Agreement is below always answering "no" in all three builds (69, 84 and 73 of 95, against 85), and the mapped instructions do no better than one random instruction of the function (81.7, 81.1 and 81.9 on average; only Os is above, within chance). Only 4, 2 and 2 of the 10 IR-positive rows reproduce. Those 10 rows are 4 sites in 3 functions, so the rates themselves are very uncertain.
 4. **Overall agreement (82%, 88%, 79%) is weak evidence.** Always "no" scores 76%, 81% and 84%. Of the 40 IR-positive rows in swept functions, 33, 13 and 8 reproduce.
 5. **Which operand a skip leaves behind depends on the compiled code.** Skipping the `add` of `poly_add` leaves `a` at -O0 and the secret `b` at -Os.
 6. **The counts of detected instructions are not counts of vulnerabilities.** Many detections occur without any secret, or depend on zeroed registers (Limits).
@@ -17,6 +17,25 @@ Dilithium2, Cortex-M4 code under Unicorn. Every machine instruction of 31 functi
 | `Os` | the same IR, llvmlite approximation of -Os (2,812 B for the 38 config functions; LLVM 20's own `default<Os>` gave 2,816 B, measured once, no data here) |
 | `O3` | the same IR, LLVM `default<O3>` |
 | `Os_clang` | the C sources, file by file, clang 18 -Os. Swept but not correlated with the IR report. |
+
+## What is injected
+**The simulation injects one fault: the skip of one machine instruction.** The function runs normally up to the instruction's first execution, that execution is left out, and everything then continues normally. The fault itself never writes a value. What the program sees afterwards is whatever was already there: the old contents of the destination register, the old memory, or a call that does not happen.
+
+The IR study has several fault types. In this report, a **call skip** is a report row for a removed call (`fnSkip`), and a **value fault** is any other row. These names describe the IR side of the comparison only:
+
+| IR model | what the IR study does (`binOp_load_store_Fault.cpp`, `loop_fn_Fault.cpp`) | rows compared at O0 | what the skip does at the same place | same fault? |
+|---|---|---|---|---|
+| `fnSkip` | removes a call | 70 | the `bl` is not executed | yes, at the `bl` itself |
+| `opA` | sets the second operand of an arithmetic instruction to 0 | 23 | the result register keeps its old value | only by coincidence |
+| `opB` | sets the first operand to 0 | 23 | same | only by coincidence |
+| `zero` | replaces the result by 0 | 23 | same | only if the old value is 0 |
+| `undef` | replaces the result by LLVM's `undef` | 23 | same | not defined |
+| `mem` | removes a store, or makes a load return 0 | 3 | the store does not happen, or the register keeps its old value | store: yes; load: only if the old value is 0 |
+
+- **`opA` and `opB` change an operand, not the result.** For `a + b` they give `a` and `b`, for `a - b` they give `a` and `-b`, and for `a * b` both give 0, the same as `zero`.
+- **The compiler decides what a skipped computation leaves.** If the destination register held `a`, skipping `a + b` acts like `opA`; if it held `b`, like `opB`; otherwise like neither. The `poly_add` case below shows both.
+- **One skip is compared with up to four models.** They share the same machine instructions and can have different verdicts, so some rows must disagree.
+- **What follows.** Agreement on call-skip rows compares like with like. Agreement on value-fault rows asks whether a skip *stands in for* a value fault. Whether the value faults themselves survive compilation would need injecting them: for `opA`, `opB` and `zero`, overwriting the destination register with the value the model gives; for a load, writing 0. `undef` has no machine value. This was not done.
 
 ## What the skips find
 | build | instructions | never executed | crashed on every secret value | ineffective | correction | direct_leak | any test | of which in `*uniform*` |
