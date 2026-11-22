@@ -107,6 +107,7 @@ To get hardware counters, run step 1 under `perf stat -e task-clock,cycles,instr
 | `report_rows.csv` | report row | `n_pcs` mapped, `n_pcs_detected`, `mc_any` (yes / no / not executed / undecided / inlined only / unmapped / not swept), `agree`. Only the row's own function counts; copies inlined into other functions are in `n_inlined_*`. |
 | `opt_compare.csv` | report row | each build's `n_pcs`, `n_detected` and `mc_any` side by side |
 | `stats.csv` | build and row set | `correlate.py stats`: 2×2 counts, agreement, kappa, and the always-"no" and random-PC baselines |
+| `elapsed.csv` | build | seconds elapsed on 32 cores |
 | `timing_compare.csv` | function | IR-level seconds (and per IR fault) against ours (and per PC) |
 
 ## Caveats

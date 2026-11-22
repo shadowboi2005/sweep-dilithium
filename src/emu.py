@@ -240,6 +240,7 @@ class Machine:
             mm.madvise(mmap.MADV_DONTNEED)
         if self._stray:  # code changed, or a trial ran data as code: drop its translations
             self.uc.ctl_flush_tb()
+            self._block_cache.clear()
             self._stray = False
         self.peripherals.regs = dict(self._regs0)
         self.peripherals._reload = 0x00FFFFFF

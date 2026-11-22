@@ -1,0 +1,5 @@
+build,seconds_on_32_cores
+O0,2336
+Os,421
+Os_clang,1028
+O3,542
