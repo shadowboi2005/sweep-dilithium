@@ -31,6 +31,8 @@ These ports were checked against QEMU-test's own code:
 - QEMU-test's `run_trial` writes byte-identical inputs on 138 (function, seed, draw, secret) and probe cases;
 - `domain_values`, `infer_field_mod` and coefficient-shape detection agree on all 43 distribution strings.
 
+**Known mismatch: `poly_ntt`.** Its report row has a witness (s1=12, position 916) that is impossible here, where the config's distribution gives 5 values of [-2, 2] on 256 int32 words. Treating the secret as bytes reproduces that witness exactly (`reviews/REVIEW_BIAS_2.md`), so the IR row was made with other settings.
+
 There is one deliberate difference. QEMU-test enters the function through a generated `main()`; here it is called directly with the same argument values and buffer contents. The unfaulted runs depend only on (s, p, r), so they are computed once per function and shared by its instructions. All functions' instructions go into one work queue, costliest first.
 
 **Argument layout.** QEMU-test reads it from per-function `qemu_witness.json` files. Those are not available here, so `qemu_inputs.IRLayout` rebuilds the layout the way the harness generator (`Dilithium-LLVM/llvm/fault-types`, `createDynamicDriverFunction`) and `extract_qemu_witness.py` would:
@@ -49,7 +51,7 @@ Pass `--witness-dir` (QEMU-test's `tests_dilithium/`) to use the real files inst
 | `data/` | `function_inputs/`, `dilithium2.ll`, `fault_report_dilithium.csv`, `timing_dilithium.csv` (IR-level timing) |
 | `elf/` | the four ELFs and the relabelled IR |
 | `results/` | the CSVs: one folder per build, and the comparisons |
-| `reviews/` | two independent reviews by AI agents (bias, code), made on an earlier version |
+| `reviews/` | independent reviews by AI agents (bias, code): the first round on an early version, the second (`*_2.md`) on commit 967f155 |
 
 | `src/` file | contents |
 |---|---|

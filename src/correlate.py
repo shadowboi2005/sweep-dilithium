@@ -264,10 +264,11 @@ def _site_pairs(rows):
             for rs in site.values()]
 
 
-def _random_pc_null(rows, faults, draws):
-    """Agreement with as many random PCs of the same function instead of the
-    mapped ones, out of those that count for the observed rows (executed, not
-    only crashes)."""
+def _random_pc_null(rows, faults, draws, one_pc=False):
+    """Agreement with random PCs of the same function instead of the mapped
+    ones, out of those that count for the observed rows (executed, not only
+    crashes): as many as are mapped, or just one.  The more PCs a row maps to,
+    the more often "any PC says yes" holds by chance; one PC has no such bias."""
     pool, groups = defaultdict(list), defaultdict(list)
     for f in faults:
         if _decided(f, "ineffective"):
@@ -278,7 +279,7 @@ def _random_pc_null(rows, faults, draws):
     for _ in range(draws):
         pairs = []
         for (fn, _, n), rs in groups.items():  # one draw for all tests of a site, as observed
-            pick = rng.sample(pool[fn], min(n, len(pool[fn])))
+            pick = rng.sample(pool[fn], min(1 if one_pc else n, len(pool[fn])))
             pairs += [(r["ir_detected"], "yes" if any(f[r["test"]] == "yes" for f in pick) else "no") for r in rs]
         scores.append(_score(pairs))
     observed = _score(_pairs(rows))
@@ -292,7 +293,7 @@ def _random_pc_null(rows, faults, draws):
 
 
 def _outcomes_of_yes_rows(rows):
-    yes = [r for r in rows if r["ir_detected"] == "yes"]
+    yes = [r for r in rows if r["ir_detected"] == "yes" and r["mc_any"] != "not swept"]
     outcomes = Counter(r["mc_any"] for r in yes)
     return {"n": len(yes), "tp": outcomes["yes"], **{"mc_" + k.replace(" ", "_"): v for k, v in outcomes.items()}}
 
@@ -307,11 +308,15 @@ def cmd_stats(a):
         if not compared:
             print(f"{label}: no comparable rows")
             continue
+        faults = read_csv(os.path.join(d, "machine_faults.csv"))
         results = {name: _score(_pairs(rs)) for name, rs in _row_sets(compared).items()}
-        results["IR sites"] = _score(_site_pairs(compared))
-        results[f"random PCs of the same function (mean of {a.draws})"] = _random_pc_null(
-            compared, read_csv(os.path.join(d, "machine_faults.csv")), a.draws)
-        results["all IR yes rows"] = _outcomes_of_yes_rows(rows)
+        results["(IR site, test) units"] = _score(_site_pairs(compared))
+        for name in ("all rows", "call skips (fnSkip)", "value faults"):
+            rs = _row_sets(compared)[name]
+            if rs:
+                results[f"{name}: as many random PCs"] = _random_pc_null(rs, faults, a.draws)
+                results[f"{name}: one random PC"] = _random_pc_null(rs, faults, a.draws, one_pc=True)
+        results["IR yes rows of swept functions"] = _outcomes_of_yes_rows(rows)
         out += [{"build": label, "set": name, **r} for name, r in results.items()]
     write_csv(os.path.join(a.out, "stats.csv"), out)
     print(f"{len(out)} rows -> {a.out}/stats.csv")
