@@ -1,39 +1,39 @@
 function,status,seconds,cpu_seconds,calibration_seconds,golden_seconds,n_pcs,trials,emu_insns,jobs
+pqcrystals_dilithium2_ref_open,error: ValueError: secret-buf 'sm' has active length 0: no secret value would ever reach the function,,,,,,,,
 keccak_absorb,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/keccak_absorb.json',,,,,,,,
 pqcrystals_dilithium2_ref_decompose,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/decompose.json',,,,,,,,
 pqcrystals_dilithium2_ref_power2round,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/power2round.json',,,,,,,,
 pqcrystals_dilithium2_ref_polyveck_chknorm,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/polyveck_chknorm.json',,,,,,,,
 pqcrystals_dilithium2_ref_polyvecl_chknorm,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/polyvecl_chknorm.json',,,,,,,,
 pqcrystals_dilithium2_ref_unpack_sk,error: FileNotFoundError: [Errno 2] No such file or directory: 'data/function_inputs/unpack_sk.json',,,,,,,,
-pqcrystals_dilithium2_ref_poly_add,ok,10.941,11.852,0.089,0.712,12,9984,14349630,32
-pqcrystals_dilithium2_ref_polyvecl_add,ok,66.242,74.589,0.217,4.559,17,30929,196529706,32
-pqcrystals_dilithium2_ref_poly_ntt,ok,0.392,0.419,0.086,0.138,1,20,538660,32
-pqcrystals_dilithium2_ref_invntt_tomont,ok,314.611,365.975,0.142,7.181,48,43008,1194506238,32
-pqcrystals_dilithium2_ref_ntt,ok,3.54,4.046,0.086,0.118,34,578,11709036,32
-pqcrystals_dilithium2_ref_open,ok,540.85,616.176,0.215,9.031,47,42752,2017108718,32
-pqcrystals_dilithium2_ref_poly_caddq,ok,25.06,28.234,0.058,2.081,12,10752,30000682,32
-pqcrystals_dilithium2_ref_poly_decompose,ok,23.887,26.746,0.032,1.664,17,11868,80762928,32
-pqcrystals_dilithium2_ref_poly_invntt_tomont,ok,6.978,6.98,0.144,6.751,1,257,7178,32
-pqcrystals_dilithium2_ref_poly_make_hint,ok,24.031,26.847,0.117,1.503,19,13336,75940933,32
-pqcrystals_dilithium2_ref_poly_pointwise_montgomery,ok,28.165,31.392,0.2,1.497,17,14336,54765676,32
-pqcrystals_dilithium2_ref_poly_sub,ok,10.115,10.957,0.087,0.711,12,9984,14283324,32
-pqcrystals_dilithium2_ref_poly_uniform,ok,731.166,816.412,0.0,4.691,86,80387,17512831301,32
-pqcrystals_dilithium2_ref_poly_uniform_eta,ok,930.454,1048.307,0.0,2.788,37,19317,28816731505,32
-pqcrystals_dilithium2_ref_poly_uniform_gamma1,ok,868.438,977.968,0.031,4.205,19,4418,27745408758,32
-pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery,ok,357.954,413.58,0.888,24.446,18,15360,1215641870,32
-pqcrystals_dilithium2_ref_polyveck_add,ok,103.134,117.079,0.153,7.433,17,50432,322227609,32
-pqcrystals_dilithium2_ref_polyveck_caddq,ok,61.219,70.051,0.098,6.704,11,9728,101162983,32
-pqcrystals_dilithium2_ref_polyveck_decompose,ok,56.108,64.087,0.085,4.945,16,10848,284984626,32
-pqcrystals_dilithium2_ref_polyveck_invntt_tomont,ok,232.45,267.121,0.333,25.826,11,9728,883192519,32
-pqcrystals_dilithium2_ref_polyveck_ntt,ok,4.003,4.536,0.27,0.286,11,190,14139982,32
-pqcrystals_dilithium2_ref_polyveck_pointwise_poly_montgomery,ok,79.627,90.879,0.17,4.539,17,14336,210879104,32
-pqcrystals_dilithium2_ref_polyveck_reduce,ok,49.349,55.768,0.079,4.646,11,9728,101124557,32
-pqcrystals_dilithium2_ref_polyveck_shiftl,ok,66.423,74.567,0.042,1.588,10,5656,452015886,32
-pqcrystals_dilithium2_ref_polyveck_sub,ok,103.833,118.033,0.155,6.855,16,50176,320031755,32
-pqcrystals_dilithium2_ref_polyveck_uniform_eta,ok,69.866,79.718,0.0,8.846,18,7494,820233632,32
-pqcrystals_dilithium2_ref_polyvecl_invntt_tomont,ok,236.28,271.551,0.328,26.871,11,9728,883192519,32
-pqcrystals_dilithium2_ref_polyvecl_ntt,ok,4.202,4.727,0.268,0.488,10,170,12415422,32
-pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery,ok,101.173,116.484,0.367,6.262,25,16384,340157209,32
-pqcrystals_dilithium2_ref_polyvecl_pointwise_poly_montgomery,ok,68.479,78.463,0.174,5.13,17,14336,210879104,32
-pqcrystals_dilithium2_ref_polyvecl_uniform_eta,ok,69.059,78.756,0.0,8.8,18,7556,766440005,32
-pqcrystals_dilithium2_ref_polyvecl_uniform_gamma1,ok,138.997,159.701,0.104,12.677,19,9768,2826925882,32
+pqcrystals_dilithium2_ref_poly_add,ok,9.912,10.773,0.088,0.7,12,8968,12518798,32
+pqcrystals_dilithium2_ref_polyvecl_add,ok,67.913,76.895,0.228,4.997,17,30804,209207014,32
+pqcrystals_dilithium2_ref_poly_ntt,ok,0.346,0.392,0.09,0.158,1,20,538660,32
+pqcrystals_dilithium2_ref_invntt_tomont,ok,323.55,375.71,0.149,7.83,48,43008,1194506238,32
+pqcrystals_dilithium2_ref_ntt,ok,3.429,3.929,0.089,0.139,34,578,11709028,32
+pqcrystals_dilithium2_ref_poly_caddq,ok,26.451,30.067,0.059,1.878,12,10752,30000682,32
+pqcrystals_dilithium2_ref_poly_decompose,ok,24.91,28.187,0.033,1.715,17,11868,80762928,32
+pqcrystals_dilithium2_ref_poly_invntt_tomont,ok,10.062,11.287,0.15,8.192,1,1024,4204544,32
+pqcrystals_dilithium2_ref_poly_make_hint,ok,27.19,29.57,0.164,2.424,19,13336,75941188,32
+pqcrystals_dilithium2_ref_poly_pointwise_montgomery,ok,28.998,32.607,0.348,1.584,17,14336,54765676,32
+pqcrystals_dilithium2_ref_poly_sub,ok,9.739,10.545,0.171,0.687,12,8968,12452492,32
+pqcrystals_dilithium2_ref_poly_uniform,ok,749.795,837.779,0.0,4.501,86,80387,17518054074,32
+pqcrystals_dilithium2_ref_poly_uniform_eta,ok,1006.386,1133.667,0.0,3.023,37,19089,28851134203,32
+pqcrystals_dilithium2_ref_poly_uniform_gamma1,ok,967.534,1090.608,0.045,4.208,19,4418,27745408758,32
+pqcrystals_dilithium2_ref_polyvec_matrix_pointwise_montgomery,ok,397.95,434.118,1.386,29.328,18,15360,1215641870,32
+pqcrystals_dilithium2_ref_polyveck_add,ok,113.063,127.48,0.222,9.612,17,54272,349985573,32
+pqcrystals_dilithium2_ref_polyveck_caddq,ok,64.704,71.807,0.147,10.169,11,9728,101162983,32
+pqcrystals_dilithium2_ref_polyveck_decompose,ok,57.301,65.879,0.119,5.803,16,10844,284925081,32
+pqcrystals_dilithium2_ref_polyveck_invntt_tomont,ok,264.583,288.158,0.475,32.743,11,9728,883192519,32
+pqcrystals_dilithium2_ref_polyveck_ntt,ok,4.246,4.865,0.286,0.513,11,190,14139982,32
+pqcrystals_dilithium2_ref_polyveck_pointwise_poly_montgomery,ok,69.689,80.21,0.183,5.284,17,14336,210879104,32
+pqcrystals_dilithium2_ref_polyveck_reduce,ok,51.357,59.374,0.138,5.555,11,9728,101124557,32
+pqcrystals_dilithium2_ref_polyveck_shiftl,ok,69.015,77.728,0.083,2.153,10,5656,452015886,32
+pqcrystals_dilithium2_ref_polyveck_sub,ok,110.109,123.6,0.229,9.592,16,50176,320032007,32
+pqcrystals_dilithium2_ref_polyveck_uniform_eta,ok,84.107,96.836,0.0,9.95,18,7500,963683747,32
+pqcrystals_dilithium2_ref_polyvecl_invntt_tomont,ok,253.631,279.757,0.576,28.087,11,9728,883192519,32
+pqcrystals_dilithium2_ref_polyvecl_ntt,ok,3.855,4.184,0.465,0.714,10,170,12415422,32
+pqcrystals_dilithium2_ref_polyvecl_pointwise_acc_montgomery,ok,102.367,118.203,0.574,7.372,25,16384,340157209,32
+pqcrystals_dilithium2_ref_polyvecl_pointwise_poly_montgomery,ok,70.755,81.426,0.256,5.954,17,14336,210879104,32
+pqcrystals_dilithium2_ref_polyvecl_uniform_eta,ok,90.923,104.946,0.0,10.102,18,7556,1019361497,32
+pqcrystals_dilithium2_ref_polyvecl_uniform_gamma1,ok,159.25,175.55,0.162,16.322,19,9768,2960358252,32

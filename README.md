@@ -1,6 +1,6 @@
 # Do LLVM-IR fault findings survive as machine-instruction skips?
 
-> **Status: the CSVs in `results/` are out of date.** They come from the code before the fixes that followed `reviews/REVIEW_CODE.md` (state leaking between trials, skips inside IT blocks having no effect, correlation counting copies inlined into other functions). Don't quote them; a re-run is pending, and `REPORT.md` will follow it.
+The results and their limits are in `REPORT.md`.
 
 The IR-level study (Dilithium-LLVM + QEMU-test) mutates single LLVM IR instructions and scores each mutant with three tests:
 - **ineffective**: whether the fault is ineffective for some secret values and effective for others;
