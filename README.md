@@ -53,12 +53,15 @@ Pass `--witness-dir` (QEMU-test's `tests_dilithium/`) to use the real files inst
 
 | `src/` file | contents |
 |---|---|
-| `find_faults.py` | step 1, the sweep |
+| `find_faults.py` | step 1: command line, setup, worker pools, outputs |
+| `sweep.py` | step 1: the sweep of one instruction |
+| `checkpoint.py` | finished work, so that a rerun resumes |
 | `correlate.py` | step 2: mapping, comparisons, statistics |
 | `emu.py` | the Unicorn Cortex-M4 (MPS2-AN386) machine and the `Skip` fault, trimmed from ucpqc |
 | `qemu_inputs.py` | QEMU-test's samplers, argument layout, calibration and trial inputs |
 | `detectors.py` | QEMU-test's three tests |
 | `ir.py` | IR indexing, `relabel`, PC → IR through DWARF (including inlined code) |
+| `scheme.py`, `tables.py` | Dilithium2 constants and names; CSV reading and writing |
 
 ## Usage
 Run from this folder. Everything the tool reads is in here.

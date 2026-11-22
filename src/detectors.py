@@ -18,7 +18,8 @@ import random
 
 import numpy as np
 
-Q = 8380417
+from scheme import Q
+
 
 
 def decode_words(raw, word_size):

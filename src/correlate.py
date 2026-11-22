@@ -20,7 +20,6 @@
         stats.csv  agreement with the report next to always-"no" and random-PC baselines
 """
 import argparse
-import csv
 import os
 import random
 import re
@@ -31,6 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import ir  # noqa: E402
+from tables import read_csv, write_csv  # noqa: E402
 
 TESTS = ("ineffective", "correction", "direct_leak")
 FAMILIES = ("binOpFault", "loadStoreSkip", "loopOrFuncSkip")
@@ -54,7 +54,7 @@ def parse_fault(fault, function):
 
 def load_report(path):
     rows = []
-    for r in csv.DictReader(open(path, newline="")):
+    for r in read_csv(path):
         family, idx, model, callee = parse_fault(r["fault"], r["function"])
         rows.append({**r, "detected": r["detected"].strip().lower(), "family": family, "ir_index": idx,
                      "model": model, "callee": callee})
@@ -72,93 +72,99 @@ def _decided(f, test):
     return test == "direct_leak" or int(f["sv_examined"]) > 0
 
 
+CORRELATION_FIELDS = [
+    "kind", "swept_function", "pc", "asm", "ir_function", "ir_index", "ir_inst", "match", "fault",
+    "test", "ir_detected", "mc_detected", "own_function", "agree", "fired", "mc_ineffective", "mc_correction",
+    "mc_direct_leak", "ir_detail", "mc_detail"]
+
+
+class _IRText:
+    """The text of IR instructions, empty where there is none."""
+
+    def __init__(self, module):
+        self._functions = module.functions
+
+    def __call__(self, function, index):
+        f = self._functions.get(function)
+        return f.insts[index].text.strip() if f and index < len(f.insts) else ""
+
+
+def _matched_row(base, fault, row, inst):
+    test, own = row["test"], fault["function"] == base["ir_function"]
+    comparable = own and _decided(fault, test)
+    return {**base, "kind": "matched", "ir_index": row["ir_index"], "ir_inst": inst, "fault": row["fault"], "test": test,
+            "ir_detected": row["detected"], "mc_detected": fault[test], "own_function": "yes" if own else "no",
+            "agree": _agree(row["detected"], fault[test]) if comparable else "-",
+            "ir_detail": row["detail"], "mc_detail": fault[f"{test}_detail"]}
+
+
+def _machine_row(base, indices, inst_text):
+    texts = [inst_text(base["ir_function"], i) for i in indices]
+    return {**base, "kind": "machine_only", "ir_index": ";".join(map(str, indices)), "ir_inst": " | ".join(texts)}
+
+
+def _ir_only_row(row, swept, inst_text):
+    why = "no PC maps to this IR instruction" if row["function"] in swept else "function not swept"
+    return {"kind": "ir_only", "ir_function": row["function"], "ir_index": row["ir_index"],
+            "ir_inst": inst_text(row["function"], row["ir_index"]), "fault": row["fault"], "test": row["test"],
+            "ir_detected": row["detected"], "ir_detail": row["detail"], "match": why}
+
+
+def _machine_verdict(row, own, other, swept):
+    """What the PCs of a report row say: yes / no, or why there is no verdict."""
+    if any(f[row["test"]] == "yes" for f in own):
+        return "yes"
+    if any(_decided(f, row["test"]) for f in own):
+        return "no"
+    if own:
+        return "not executed" if all(f["fired"] == "0" for f in own) else "undecided"
+    if row["function"] not in swept:
+        return "not swept"
+    return "inlined only" if other else "unmapped"
+
+
+def _report_row(row, faults, swept):
+    # Only the function's own instructions were tested on the row's inputs.
+    # Copies inlined into other functions ran under those functions' tests.
+    own = [f for f in faults if f["function"] == row["function"]]
+    other = [f for f in faults if f["function"] != row["function"]]
+    test, verdict = row["test"], _machine_verdict(row, own, other, swept)
+    return {"function": row["function"], "fault": row["fault"], "family": row["family"], "model": row["model"],
+            "test": test, "ir_index": row["ir_index"], "ir_detected": row["detected"], "n_pcs": len(own),
+            "n_pcs_decided": sum(_decided(f, test) for f in own),
+            "n_pcs_detected": sum(f[test] == "yes" for f in own), "pcs": " ".join(f["pc"] for f in own),
+            "mc_any": verdict, "agree": _agree(row["detected"], verdict), "n_inlined_pcs": len(other),
+            "n_inlined_detected": sum(f[test] == "yes" for f in other)}
+
+
 def cmd_map(a):
-    mod = ir.parse_module(open(a.ir).read())
-    p2i = ir.PcToIR(mod, a.elf)
-    faults = list(csv.DictReader(open(a.faults, newline="")))
-    report = load_report(a.report)
-    by_site = defaultdict(list)
-    for r in report:
-        by_site[(r["function"], r["ir_index"])].append(r)
+    with open(a.ir) as f:
+        module = ir.parse_module(f.read())
+    pc_to_ir, inst_text = ir.PcToIR(module, a.elf), _IRText(module)
+    faults, report = read_csv(a.faults), load_report(a.report)
     swept = {f["function"] for f in faults}
+    rows_at, faults_at = defaultdict(list), defaultdict(list)  # (function, IR index) -> ...
+    for r in report:
+        rows_at[r["function"], r["ir_index"]].append(r)
 
-    out, covered = [], set()
-    pcs_at = defaultdict(list)  # (fn, idx) -> machine rows
+    out = []
     for f in faults:
-        pc = int(f["pc"], 16)
-        ir_fn, idxs, match = p2i.lookup(pc, f["function"])
+        ir_fn, indices, match = pc_to_ir.lookup(int(f["pc"], 16), f["function"])
         base = {"swept_function": f["function"], "pc": f["pc"], "asm": f["asm"], "ir_function": ir_fn,
-                "match": match, "fired": f["fired"],
-                **{f"mc_{t}": f[t] for t in TESTS}}
-        hit = False
-        for idx in idxs:
-            pcs_at[(ir_fn, idx)].append(f)
-            inst = mod.functions[ir_fn].insts[idx].text.strip() if ir_fn in mod.functions else ""
-            for r in by_site.get((ir_fn, idx), []):
-                hit = True
-                covered.add(id(r))
-                out.append({**base, "kind": "matched", "ir_index": idx, "ir_inst": inst, "fault": r["fault"],
-                            "test": r["test"], "ir_detected": r["detected"], "mc_detected": f[r["test"]],
-                            "own_function": "yes" if f["function"] == ir_fn else "no",
-                            "agree": (_agree(r["detected"], f[r["test"]])
-                                      if f["function"] == ir_fn and _decided(f, r["test"]) else "-"), "ir_detail": r["detail"],
-                            "mc_detail": f[f"{r['test']}_detail"]})
-        if not hit:
-            out.append({**base, "kind": "machine_only", "ir_index": ";".join(map(str, idxs)),
-                        "ir_inst": " | ".join(mod.functions[ir_fn].insts[i].text.strip() for i in idxs)
-                        if ir_fn in mod.functions else ""})
-    for r in report:
-        if id(r) not in covered:
-            why = "function not swept" if r["function"] not in swept else "no PC maps to this IR instruction"
-            out.append({"kind": "ir_only", "ir_function": r["function"], "ir_index": r["ir_index"],
-                        "ir_inst": (mod.functions[r["function"]].insts[r["ir_index"]].text.strip()
-                                    if r["function"] in mod.functions and r["ir_index"] < len(mod.functions[r["function"]].insts) else ""),
-                        "fault": r["fault"], "test": r["test"], "ir_detected": r["detected"],
-                        "ir_detail": r["detail"], "match": why})
+                "match": match, "fired": f["fired"], **{f"mc_{t}": f[t] for t in TESTS}}
+        for i in indices:
+            faults_at[ir_fn, i].append(f)
+        matched = [_matched_row(base, f, r, inst_text(ir_fn, i)) for i in indices for r in rows_at.get((ir_fn, i), [])]
+        out += matched or [_machine_row(base, indices, inst_text)]
+    out += [_ir_only_row(r, swept, inst_text) for r in report if (r["function"], r["ir_index"]) not in faults_at]
+    rows = [_report_row(r, faults_at.get((r["function"], r["ir_index"]), []), swept) for r in report]
+    write_csv(os.path.join(a.out, "correlation.csv"), out, CORRELATION_FIELDS)
+    write_csv(os.path.join(a.out, "report_rows.csv"), rows)
 
-    cols = ["kind", "swept_function", "pc", "asm", "ir_function", "ir_index", "ir_inst", "match", "fault",
-            "test", "ir_detected", "mc_detected", "own_function", "agree", "fired", "mc_ineffective", "mc_correction",
-            "mc_direct_leak", "ir_detail", "mc_detail"]
-    os.makedirs(a.out, exist_ok=True)
-    with open(os.path.join(a.out, "correlation.csv"), "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=cols)
-        w.writeheader()
-        w.writerows(out)
-
-    rr = []
-    for r in report:
-        at = pcs_at.get((r["function"], r["ir_index"]), [])
-        # Only the function's own instructions were tested on the row's inputs.
-        # Copies inlined into other functions ran under those functions' tests.
-        ms = [f for f in at if f["function"] == r["function"]]
-        other = [f for f in at if f["function"] != r["function"]]
-        n_det = sum(f[r["test"]] == "yes" for f in ms)
-        n_decided = sum(_decided(f, r["test"]) for f in ms)
-        if n_det:
-            mc_any = "yes"
-        elif n_decided:
-            mc_any = "no"
-        elif ms:
-            mc_any = "not executed" if all(f["fired"] == "0" for f in ms) else "undecided"
-        elif r["function"] not in swept:
-            mc_any = "not swept"
-        else:
-            mc_any = "inlined only" if other else "unmapped"
-        rr.append({"function": r["function"], "fault": r["fault"], "family": r["family"], "model": r["model"],
-                   "test": r["test"], "ir_index": r["ir_index"], "ir_detected": r["detected"], "n_pcs": len(ms),
-                   "n_pcs_decided": n_decided, "n_pcs_detected": n_det, "pcs": " ".join(f["pc"] for f in ms), "mc_any": mc_any,
-                   "agree": _agree(r["detected"], mc_any), "n_inlined_pcs": len(other),
-                   "n_inlined_detected": sum(f[r["test"]] == "yes" for f in other)})
-    with open(os.path.join(a.out, "report_rows.csv"), "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=list(rr[0]))
-        w.writeheader()
-        w.writerows(rr)
-
-    kinds = Counter(o["kind"] for o in out)
-    print(f"correlation.csv: {dict(kinds)}")
+    print(f"correlation.csv: {dict(Counter(o['kind'] for o in out))}")
     print("report rows (IR verdict -> any mapped PC reproduces it):")
     for t in TESTS:
-        c = Counter((x["ir_detected"], x["mc_any"]) for x in rr if x["test"] == t)
+        c = Counter((x["ir_detected"], x["mc_any"]) for x in rows if x["test"] == t)
         print(f"  {t:12} " + ", ".join(f"{i}->{m}: {n}" for (i, m), n in sorted(c.items())))
 
 
@@ -166,7 +172,7 @@ def cmd_compare(a):
     tables = []
     for path in a.rows:
         label = os.path.basename(os.path.dirname(os.path.abspath(path))) or path
-        tables.append((label, {(r["fault"], r["test"]): r for r in csv.DictReader(open(path, newline=""))}))
+        tables.append((label, {(r["fault"], r["test"]): r for r in read_csv(path)}))
     keys = list(tables[0][1])
     for _, t in tables[1:]:
         keys += [k for k in t if k not in keys]
@@ -179,29 +185,25 @@ def cmd_compare(a):
             row.update({f"{label}_n_pcs": r.get("n_pcs", ""), f"{label}_n_detected": r.get("n_pcs_detected", ""),
                         f"{label}_mc_any": r.get("mc_any", "")})
         rows.append(row)
-    os.makedirs(a.out, exist_ok=True)
-    with open(os.path.join(a.out, "opt_compare.csv"), "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
-        w.writeheader()
-        w.writerows(rows)
+    write_csv(os.path.join(a.out, "opt_compare.csv"), rows)
     for label, t in tables:
         c = Counter((r["ir_detected"], r["mc_any"]) for r in t.values())
         print(f"{label}: " + ", ".join(f"{i}->{m}: {n}" for (i, m), n in sorted(c.items())))
 
 
 def cmd_timing(a):
-    irt = {r["function"]: r for r in csv.DictReader(open(a.ir_timing, newline=""))}
+    irt = {r["function"]: r for r in read_csv(a.ir_timing)}
     n_faults = Counter()
     if a.report:
         seen = set()
-        for r in csv.DictReader(open(a.report, newline="")):
+        for r in read_csv(a.report):
             if (r["function"], r["fault"]) not in seen:
                 seen.add((r["function"], r["fault"]))
                 n_faults[r["function"]] += 1
     ours = []
     for path in a.ours:
         label = os.path.basename(os.path.dirname(os.path.abspath(path)))
-        ours.append((label, {r["function"]: r for r in csv.DictReader(open(path, newline=""))}))
+        ours.append((label, {r["function"]: r for r in read_csv(path)}))
     fns = list(irt) + [f for _, t in ours for f in t if f not in irt]
     rows = []
     for fn in fns:
@@ -219,14 +221,7 @@ def cmd_timing(a):
             if o.get("seconds") and r["ir_seconds"]:
                 r[f"{label}_ir_over_ours"] = round(float(r["ir_seconds"]) / max(float(o["seconds"]), 1e-9), 2)
         rows.append(r)
-    cols = []
-    for r in rows:
-        cols += [k for k in r if k not in cols]
-    os.makedirs(a.out, exist_ok=True)
-    with open(os.path.join(a.out, "timing_compare.csv"), "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=cols)
-        w.writeheader()
-        w.writerows(rows)
+    write_csv(os.path.join(a.out, "timing_compare.csv"), rows)
     both = [r for r in rows if r["ir_seconds"] and all(r.get(f"{lab}_seconds") for lab, _ in ours)]
     if both:
         s_ir = sum(float(r["ir_seconds"]) for r in both)
@@ -249,63 +244,76 @@ def _score(pairs):
     return out
 
 
+def _row_sets(rows):
+    return {"all rows": rows, "call skips (fnSkip)": [r for r in rows if r["model"] == "fnSkip"],
+            "value faults": [r for r in rows if r["model"] != "fnSkip"],
+            "without *uniform*": [r for r in rows if "uniform" not in r["function"]],
+            **{t: [r for r in rows if r["test"] == t] for t in TESTS}}
+
+
+def _pairs(rows):
+    return [(r["ir_detected"], r["mc_any"]) for r in rows]
+
+
+def _site_pairs(rows):
+    """One unit per (IR site, test): "yes" if any fault model there is "yes"."""
+    site = defaultdict(list)
+    for r in rows:
+        site[r["function"], r["ir_index"], r["test"]].append(r)
+    return [tuple("yes" if any(r[k] == "yes" for r in rs) else "no" for k in ("ir_detected", "mc_any"))
+            for rs in site.values()]
+
+
+def _random_pc_null(rows, faults, draws):
+    """Agreement with as many random PCs of the same function instead of the
+    mapped ones, out of those that count for the observed rows (executed, not
+    only crashes)."""
+    pool, groups = defaultdict(list), defaultdict(list)
+    for f in faults:
+        if _decided(f, "ineffective"):
+            pool[f["function"]].append(f)
+    for r in rows:
+        groups[r["function"], r["pcs"], int(r["n_pcs_decided"])].append(r)
+    rng, scores = random.Random(0), []
+    for _ in range(draws):
+        pairs = []
+        for (fn, _, n), rs in groups.items():  # one draw for all tests of a site, as observed
+            pick = rng.sample(pool[fn], min(n, len(pool[fn])))
+            pairs += [(r["ir_detected"], "yes" if any(f[r["test"]] == "yes" for f in pick) else "no") for r in rs]
+        scores.append(_score(pairs))
+    observed = _score(_pairs(rows))
+
+    def summary(key, digits):
+        values = [s[key] or 0.0 for s in scores]
+        return round(sum(values) / draws, digits), round(sum(v >= (observed[key] or 0.0) for v in values) / draws, 4)
+
+    (agree, p_agree), (kappa, p_kappa) = summary("agree", 1), summary("kappa", 3)
+    return {"n": observed["n"], "agree": agree, "kappa": kappa, "p_agree": p_agree, "p_kappa": p_kappa}
+
+
+def _outcomes_of_yes_rows(rows):
+    yes = [r for r in rows if r["ir_detected"] == "yes"]
+    outcomes = Counter(r["mc_any"] for r in yes)
+    return {"n": len(yes), "tp": outcomes["yes"], **{"mc_" + k.replace(" ", "_"): v for k, v in outcomes.items()}}
+
+
 def cmd_stats(a):
     """Report-row agreement of each build, next to trivial baselines."""
-    os.makedirs(a.out, exist_ok=True)
     out = []
     for d in a.dirs:
         label = os.path.basename(os.path.abspath(d))
-        rows = list(csv.DictReader(open(os.path.join(d, "report_rows.csv"), newline="")))
-        faults = list(csv.DictReader(open(os.path.join(d, "machine_faults.csv"), newline="")))
-        dec = [r for r in rows if r["agree"] in ("yes", "no")]
-        if not dec:
+        rows = read_csv(os.path.join(d, "report_rows.csv"))
+        compared = [r for r in rows if r["agree"] in ("yes", "no")]
+        if not compared:
             print(f"{label}: no comparable rows")
             continue
-        sets = {"all rows": dec, "call skips (fnSkip)": [r for r in dec if r["model"] == "fnSkip"],
-                "value faults": [r for r in dec if r["model"] != "fnSkip"],
-                "without *uniform*": [r for r in dec if "uniform" not in r["function"]]}
-        sets.update({t: [r for r in dec if r["test"] == t] for t in TESTS})
-        for name, rs in sets.items():
-            out.append({"build": label, "set": name, **_score([(r["ir_detected"], r["mc_any"]) for r in rs])})
-        # one unit per (IR site, test): IR "yes" if any fault model there is "yes"
-        site = defaultdict(set)
-        for r in dec:
-            site[r["function"], r["ir_index"], r["test"]].add((r["ir_detected"], r["mc_any"]))
-        out.append({"build": label, "set": "IR sites",
-                    **_score([(max(i for i, _ in v), max(m for _, m in v)) for v in site.values()])})
-        # null: as many random PCs of the same function instead of the mapped ones,
-        # out of those that count for the observed rows (executed, not only crashes)
-        by_fn = defaultdict(list)
-        for f in faults:
-            if _decided(f, "ineffective"):
-                by_fn[f["function"]].append(f)
-        rng, agree, kappa = random.Random(0), [], []
-        groups = defaultdict(list)
-        for r in dec:
-            groups[r["function"], r["pcs"], int(r["n_pcs_decided"])].append(r)
-        for _ in range(a.draws):
-            pairs = []
-            for (fn, _, n), rs in groups.items():  # one draw for all tests of a site, as observed
-                pick = rng.sample(by_fn[fn], min(n, len(by_fn[fn])))
-                pairs += [(r["ir_detected"], "yes" if any(f[r["test"]] == "yes" for f in pick) else "no") for r in rs]
-            s = _score(pairs)
-            agree.append(s["agree"])
-            kappa.append(s["kappa"] if s["kappa"] != "" else 0.0)
-        obs = _score([(r["ir_detected"], r["mc_any"]) for r in dec])
-        out.append({"build": label, "set": f"random PCs of the same function (mean of {a.draws})", "n": obs["n"],
-                    "agree": round(sum(agree) / len(agree), 1), "kappa": round(sum(kappa) / len(kappa), 3),
-                    "p_agree": round(sum(x >= obs["agree"] for x in agree) / len(agree), 4),
-                    "p_kappa": round(sum(x >= (obs["kappa"] or 0.0) for x in kappa) / len(kappa), 4)})
-        yes = [r for r in rows if r["ir_detected"] == "yes"]
-        out.append({"build": label, "set": "all IR yes rows", "n": len(yes), "tp": sum(r["mc_any"] == "yes" for r in yes),
-                    **{"mc_" + k.replace(" ", "_"): v for k, v in Counter(r["mc_any"] for r in yes).items()}})
-    cols = []
-    for r in out:
-        cols += [k for k in r if k not in cols]
-    with open(os.path.join(a.out, "stats.csv"), "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=cols)
-        w.writeheader()
-        w.writerows(out)
+        results = {name: _score(_pairs(rs)) for name, rs in _row_sets(compared).items()}
+        results["IR sites"] = _score(_site_pairs(compared))
+        results[f"random PCs of the same function (mean of {a.draws})"] = _random_pc_null(
+            compared, read_csv(os.path.join(d, "machine_faults.csv")), a.draws)
+        results["all IR yes rows"] = _outcomes_of_yes_rows(rows)
+        out += [{"build": label, "set": name, **r} for name, r in results.items()]
+    write_csv(os.path.join(a.out, "stats.csv"), out)
     print(f"{len(out)} rows -> {a.out}/stats.csv")
 
 

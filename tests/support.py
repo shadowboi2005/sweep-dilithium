@@ -16,11 +16,8 @@ def program(**functions):
     """A Machine with each function's halfwords placed one after another."""
     m, addr = Machine(ELF), CODE
     for name, halfwords in functions.items():
-        m._install(addr, struct.pack(f"<{len(halfwords)}H", *halfwords))
-        m.image._by_name[name] = (addr, 2 * len(halfwords), "STT_FUNC")
+        m.add_function(name, addr, struct.pack(f"<{len(halfwords)}H", *halfwords))
         addr += 2 * len(halfwords)
-    m._code_hi = addr
-    m.restore_memory()
     return m
 
 

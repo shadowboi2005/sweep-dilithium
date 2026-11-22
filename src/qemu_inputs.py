@@ -31,10 +31,10 @@ import random
 import re
 
 from emu import EmulationError, EmulationTimeout
+from scheme import Q
 
 # --- Dilithium2 parameters / distributions (distributions_unicorn.py) -----------
 
-Q = 8380417
 D = 13
 K_, L_, ETA, TAU, BETA, GAMMA1, GAMMA2, OMEGA = 4, 4, 2, 39, 78, 1 << 17, (Q - 1) // 88, 80
 COEFF_BYTES = 4
@@ -716,7 +716,8 @@ def load_witness(witness_dir, fname):
     if not os.path.exists(p):
         p = os.path.join(witness_dir, f"{fname}.json")
     if os.path.exists(p):
-        return json.load(open(p))["layout"]
+        with open(p) as f:
+            return json.load(f)["layout"]
     return None
 
 
@@ -724,7 +725,10 @@ def load_active_lengths(witness_dir, fname):
     if not witness_dir:
         return None
     p = os.path.join(witness_dir, fname, "active_lengths.json")
-    return json.load(open(p)) if os.path.exists(p) else None
+    if not os.path.exists(p):
+        return None
+    with open(p) as f:
+        return json.load(f)
 
 
 __all__ = ["Harness", "IRLayout", "calibrate", "derive_all", "domain_values", "infer_field_mod",

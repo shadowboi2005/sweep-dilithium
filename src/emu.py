@@ -140,6 +140,9 @@ class ElfImage:
     def has(self, name):
         return name in self._by_name
 
+    def add_function(self, name, addr, size):
+        self._by_name[name] = (addr, size, "STT_FUNC")
+
     def extent_of(self, name_or_addr):
         """(start, end) of the function containing the address / named function."""
         addr = self.addr_of(name_or_addr)
@@ -176,7 +179,7 @@ class Machine:
         self.icount = 0
         self._block_cache = {}
         self._cpu0 = None
-        self._skip = None  # the armed Skip, if any
+        self.armed_skip = None
         self._stray = False
         self._halt = None
         self.uc = Uc(unicorn.UC_ARCH_ARM, unicorn.UC_MODE_THUMB | unicorn.UC_MODE_MCLASS)
@@ -194,9 +197,9 @@ class Machine:
             self._maps[r.name] = (fd, mm, host, r)
             self.uc.mem_map_ptr(r.base, r.size, unicorn.UC_PROT_ALL, host)
         self._code = []  # (host address, bytes) of the loaded segments
-        self._install(TRAMPOLINE.base, b"\xfe\xe7" * 8)  # b .
+        self._write_pristine(TRAMPOLINE.base, b"\xfe\xe7" * 8)  # b .
         for seg in self.image.segments:
-            self._install(seg.addr, seg.data)
+            self._write_pristine(seg.addr, seg.data)
         self._code_lo = min(x.addr for x in self.image.segments)
         self._code_hi = max(x.addr + len(x.data) for x in self.image.segments)
         for r in (APB, PPB):
@@ -210,7 +213,7 @@ class Machine:
         self._alloc_ptr = SCRATCH.base
         self._regs0 = dict(self.peripherals.regs)
 
-    def _install(self, addr, data):
+    def _write_pristine(self, addr, data):
         """Put `data` into the pristine contents of memory."""
         for fd, mm, host, r in self._maps.values():
             if r.contains(addr):
@@ -219,6 +222,13 @@ class Machine:
                     self._code.append((host + addr - r.base, bytes(data)))
                 return
         raise ValueError(f"{addr:#x} is not in memory")
+
+    def add_function(self, name, addr, code):
+        """Place extra code in flash and make it callable by name."""
+        self._write_pristine(addr, code)
+        self._code_hi = max(self._code_hi, addr + len(code))
+        self.image.add_function(name, addr, len(code))
+        self.restore_memory()
 
     def restore_memory(self):
         """Put every mapped byte (code, data, .bss, stack, scratch, return page)
@@ -359,7 +369,7 @@ class Machine:
         self.set_reg("lr", ret | 1)
         self._halt = None
         t_end = time.perf_counter() + timeout_s
-        skip = self._skip
+        skip = self.armed_skip
         try:
             if skip is not None:
                 skip.begin()
@@ -421,7 +431,7 @@ class Skip:
         self._handles = [machine.hook_code(self._on_pc, pc, pc)]
         for addr in it_block or ():
             self._handles.append(machine.hook_code(self._on_it_edge, addr, addr))
-        machine._skip = self
+        machine.armed_skip = self
 
     def reset(self):
         self.hits = self.fired = 0
@@ -458,7 +468,7 @@ class Skip:
         self.end()
         for h in self._handles:
             self.machine.unhook(h)
-        self.machine._skip = None
+        self.machine.armed_skip = None
 
 
 def it_blocks(insns):
