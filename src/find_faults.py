@@ -361,6 +361,7 @@ def main(argv=None):
             "calibration_seconds": round(t_cal[fn][0], 3), "golden_seconds": round(t_gold[fn][0], 3),
             "n_pcs": len(fn_rows), "trials": sum(r["trials"] for r in fn_rows),
             "emu_insns": sum(r["emu_insns"] for r in fn_rows), "jobs": a.jobs})
+    ck.close()
     print(f"total elapsed {time.perf_counter() - t_start:.0f}s", flush=True)
 
     with open(os.path.join(a.out, "machine_faults.csv"), "w", newline="") as f:
@@ -379,7 +380,8 @@ def main(argv=None):
     if os.path.exists(lp):
         old = json.load(open(lp))
     old.update(infos)
-    json.dump(old, open(lp, "w"), indent=1, default=str)
+    with open(lp, "w") as f:
+        json.dump(old, f, indent=1, default=str)
     print(f"{len(rows)} instructions -> {a.out}/machine_faults.csv")
 
 

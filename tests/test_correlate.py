@@ -1,5 +1,7 @@
 """Joining machine-level verdicts with the IR report."""
+import csv
 import os
+import tempfile
 import unittest
 
 from support import ROOT
@@ -32,6 +34,23 @@ class CorrelateTest(unittest.TestCase):
         s = correlate._score([("yes", "yes")] * 2 + [("yes", "no")] + [("no", "yes")] + [("no", "no")] * 6)
         self.assertEqual((s["n"], s["agree"], s["always_no"]), (10, 8, 7))
         self.assertAlmostEqual(s["kappa"], (0.8 - 0.58) / 0.42, places=3)
+
+    def test_published_report_rows_follow_from_the_sweep(self):
+        for build in ("O0", "Os"):
+            d = os.path.join(ROOT, "results", build)
+            with tempfile.TemporaryDirectory() as out:
+                correlate.main(["map", "--faults", os.path.join(d, "machine_faults.csv"),
+                                "--elf", os.path.join(ROOT, "elf", f"dil2_{build}.elf"),
+                                "--ir", os.path.join(ROOT, "elf", "dil2.relabel.ll"),
+                                "--report", os.path.join(ROOT, "data", "fault_report_dilithium.csv"), "--out", out])
+                with open(os.path.join(out, "report_rows.csv"), newline="") as f:
+                    rows = list(csv.DictReader(f))
+            with open(os.path.join(d, "report_rows.csv"), newline="") as f:
+                published = list(csv.DictReader(f))
+            for column in ("fault", "test", "pcs", "n_pcs", "n_inlined_pcs", "mc_any", "agree"):
+                self.assertEqual([r[column] for r in rows], [r[column] for r in published], (build, column))
+            # copies inlined elsewhere never decide a row
+            self.assertTrue(all(r["mc_any"] != "yes" for r in rows if r["n_pcs"] == "0"))
 
 
 if __name__ == "__main__":
