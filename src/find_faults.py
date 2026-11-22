@@ -13,7 +13,7 @@ scored with the IR-level run's three tests on the IR-level run's inputs:
     ineffective and correction have a witness; a crashed trial skips that
     secret value, a trial past --trial-timeout aborts the instruction
     (verdict "timeout");
-  * direct_leak on up to 16 trace pairs of that sweep (tests.py).
+  * direct_leak on up to 16 trace pairs of that sweep (detectors.py).
 
 The unfaulted ("correct") runs depend only on (s, p, r), so they are run once
 per function and shared by all of its instructions.
@@ -24,7 +24,7 @@ Outputs (--out DIR):
   layouts.json         per function: argument layout, active lengths, sweep setup
   checkpoint.jsonl     finished instructions; rerunning the command resumes
 
-  python find_faults.py --elf elf/dil2_O0.elf --ir elf/dil2.relabel.ll --out out/O0
+  python src/find_faults.py --elf elf/dil2_O0.elf --ir elf/dil2.relabel.ll --out out/O0
 """
 import argparse
 import csv
@@ -37,16 +37,17 @@ import time
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
 import capstone  # noqa: E402
 import numpy as np  # noqa: E402
 import unicorn  # noqa: E402
 
+import detectors as T  # noqa: E402
+import emu  # noqa: E402
 import ir  # noqa: E402
 import qemu_inputs as QI  # noqa: E402
-import tests as T  # noqa: E402
-import emu  # noqa: E402
 from emu import EmulationError, EmulationTimeout, Machine, Skip  # noqa: E402
 
 _ALL = {}  # function -> context; filled in the parent before the pools fork
@@ -247,8 +248,8 @@ def main(argv=None):
     ap.add_argument("--elf", required=True, help="ARM ELF with DWARF line info")
     ap.add_argument("--ir", required=True, help=".ll the ELF was compiled from (function signatures, call sites)")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--config", default=os.path.join(HERE, "config", "dilithium.json"))
-    ap.add_argument("--inputs", default=os.path.join(HERE, "data", "function_inputs"))
+    ap.add_argument("--config", default=os.path.join(ROOT, "config", "dilithium.json"))
+    ap.add_argument("--inputs", default=os.path.join(ROOT, "data", "function_inputs"))
     ap.add_argument("--witness-dir", help="QEMU-test tests_dilithium/ (qemu_witness.json, active_lengths.json), if available")
     ap.add_argument("--functions", help="comma-separated (full names or without the pqcrystals_dilithium2_ref_ prefix)")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2, 3])
@@ -272,7 +273,7 @@ def main(argv=None):
     h = hashlib.sha256()
     for p in [a.elf, a.ir, a.config] + sorted(
             os.path.join(d, f) for d in filter(None, (a.inputs, a.witness_dir)) for d, _, fs in os.walk(d) for f in fs) + [
-            os.path.join(HERE, f) for f in ("emu.py", "qemu_inputs.py", "tests.py", "ir.py", "find_faults.py")]:
+            os.path.join(HERE, f) for f in ("emu.py", "qemu_inputs.py", "detectors.py", "ir.py", "find_faults.py")]:
         h.update(hashlib.sha256(open(p, "rb").read()).digest())
     key = json.dumps({"content": h.hexdigest(), "unicorn": unicorn.__version__, "capstone": capstone.__version__,
                       "seeds": a.seeds, "eph": a.eph_draws, "field_mod": a.field_mod, "pos": a.secret_pos,
@@ -307,7 +308,7 @@ def main(argv=None):
             ctx, t_cal[fn], m = setup_function(a, module, cfg, fn)
             insns[fn] = m.function_insns(fn)
         except Exception as exc:  # noqa: BLE001
-            msg = f"{type(exc).__name__}: {exc}".replace(HERE + os.sep, "")
+            msg = f"{type(exc).__name__}: {exc}".replace(ROOT + os.sep, "")
             print(f"[!] {fn}: {msg}", flush=True)
             timing.append({"function": fn, "status": f"error: {msg}"})
             continue

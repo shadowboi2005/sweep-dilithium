@@ -1,7 +1,7 @@
 #!/bin/bash
 # The Os_clang ELF: the C sources compiled file by file with clang -Os, using the
 # flags of Dilithium-LLVM/llvm/llvm-gen/llvm-gen.cpp (which uses -O0).
-#   build_os_clang.sh <Dilithium-LLVM dir> <out.elf>
+#   firmware/build_os_clang.sh <Dilithium-LLVM dir> <out.elf>
 # Needs clang (18 was used) and arm-none-eabi-gcc with newlib.
 set -e
 [ $# -eq 2 ] || { echo "usage: $0 <Dilithium-LLVM dir> <out.elf>" >&2; exit 2; }

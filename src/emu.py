@@ -7,6 +7,8 @@ a single PC, and skip the instruction there on its first execution.
 import bisect
 import ctypes
 import hashlib
+import mmap
+import os
 import re
 import struct
 import time
@@ -181,19 +183,24 @@ class Machine:
         self.uc.ctl_set_cpu_model(A.UC_CPU_ARM_CORTEX_M4)
         self.cs = capstone.Cs(capstone.CS_ARCH_ARM, capstone.CS_MODE_THUMB)
         self.peripherals = Peripherals(lambda: self.icount)
-        self._ram = {}
+        # Private copy-on-write mappings: discarding a trial's pages brings back
+        # the pristine contents at a cost proportional to the pages it touched.
+        self._maps = {}
         for r in (FLASH, SRAM, SCRATCH, TRAMPOLINE):
-            self._ram[r.name] = ctypes.create_string_buffer(r.size + 4096)
-            host = (ctypes.addressof(self._ram[r.name]) + 4095) & ~4095
-            self._ram[r.name] = (self._ram[r.name], host, r)
+            fd = os.memfd_create(r.name)
+            os.ftruncate(fd, r.size)
+            mm = mmap.mmap(fd, r.size, mmap.MAP_PRIVATE, mmap.PROT_READ | mmap.PROT_WRITE)
+            host = ctypes.addressof(ctypes.c_char.from_buffer(mm))
+            self._maps[r.name] = (fd, mm, host, r)
             self.uc.mem_map_ptr(r.base, r.size, unicorn.UC_PROT_ALL, host)
+        self._code = []  # (host address, bytes) of the loaded segments
+        self._install(TRAMPOLINE.base, b"\xfe\xe7" * 8)  # b .
+        for seg in self.image.segments:
+            self._install(seg.addr, seg.data)
+        self._code_lo = min(x.addr for x in self.image.segments)
+        self._code_hi = max(x.addr + len(x.data) for x in self.image.segments)
         for r in (APB, PPB):
             self.uc.mmio_map(r.base, r.size, self._mmio_read, r.base, self._mmio_write, r.base)
-        self.uc.mem_write(TRAMPOLINE.base, b"\xfe\xe7" * 8)  # b .
-        for seg in self.image.segments:
-            self.uc.mem_write(seg.addr, seg.data)
-            if seg.memsz > len(seg.data):
-                self.uc.mem_write(seg.addr + len(seg.data), b"\x00" * (seg.memsz - len(seg.data)))
         self.uc.hook_add(unicorn.UC_HOOK_INTR, self._hook_intr)
         self.uc.hook_add(unicorn.UC_HOOK_BLOCK, self._hook_block)
         self.uc.hook_add(unicorn.UC_HOOK_MEM_READ_UNMAPPED | unicorn.UC_HOOK_MEM_WRITE_UNMAPPED
@@ -201,19 +208,26 @@ class Machine:
         # Enable the FPU (CPACR CP10/CP11), as the reset handler would.
         self.peripherals.regs[0xE000ED88] = 0xF << 20
         self._alloc_ptr = SCRATCH.base
-        self._pristine = {n: ctypes.string_at(host, r.size) for n, (_, host, r) in self._ram.items()}
         self._regs0 = dict(self.peripherals.regs)
+
+    def _install(self, addr, data):
+        """Put `data` into the pristine contents of memory."""
+        for fd, mm, host, r in self._maps.values():
+            if r.contains(addr):
+                os.pwrite(fd, data, addr - r.base)
+                if r is FLASH:
+                    self._code.append((host + addr - r.base, bytes(data)))
+                return
+        raise ValueError(f"{addr:#x} is not in memory")
 
     def restore_memory(self):
         """Put every mapped byte (code, data, .bss, stack, scratch, return page)
         and the peripherals back to their state before the first call."""
-        for n, (_, host, r) in self._ram.items():
-            if n in ("flash", "trampoline"):  # code: rewrite (and retranslate) only if a trial changed it
-                if _libc.memcmp(ctypes.c_void_p(host), self._pristine[n], ctypes.c_size_t(r.size)):
-                    ctypes.memmove(host, self._pristine[n], r.size)
-                    self._stray = True
-            else:
-                ctypes.memmove(host, self._pristine[n], r.size)
+        for host, data in self._code:
+            if _libc.memcmp(ctypes.c_void_p(host), data, ctypes.c_size_t(len(data))):
+                self._stray = True
+        for _, mm, _, _ in self._maps.values():
+            mm.madvise(mmap.MADV_DONTNEED)
         if self._stray:  # code changed, or a trial ran data as code: drop its translations
             self.uc.ctl_flush_tb()
             self._stray = False
@@ -232,7 +246,7 @@ class Machine:
         return False
 
     def _hook_block(self, uc, addr, size, _):
-        if addr >= FLASH.size and addr != TRAMPOLINE.base:
+        if not (self._code_lo <= addr < self._code_hi or addr == TRAMPOLINE.base):
             self._stray = True
         if size:
             n = self._block_cache.get((addr, size))

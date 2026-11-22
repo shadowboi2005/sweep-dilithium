@@ -8,7 +8,7 @@ relabel() gives instruction N of every function its own debug location
 `line N+1`; an ELF compiled from relabelled IR then maps every PC back to
 (function, IR index) exactly through its DWARF line table (pc_to_ir).
 
-    python ir.py relabel in.ll out.ll
+    python src/ir.py relabel in.ll out.ll
 """
 import os
 import re

@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """Step 2: correlate the machine-level faults with the IR-level report.
 
-  correlate.py map --faults out/O0/machine_faults.csv --elf ELF --ir RELABELLED.ll \
+  src/correlate.py map --faults out/O0/machine_faults.csv --elf ELF --ir RELABELLED.ll \
                    --report fault_report_dilithium.csv --out out/O0
       each PC -> (IR function, IR instruction index) through DWARF, joined with
       the report rows of that instruction:
         correlation.csv  kind = matched | machine_only | ir_only, one row per
                          (PC, report row) / unmatched PC / unmatched report row
-        report_rows.csv  one row per report row: how many PCs map to its IR
-                         instruction, how many reproduce its test, agree?
-  correlate.py compare out/O0/report_rows.csv out/O3/report_rows.csv --out out
+        report_rows.csv  one row per report row: how many PCs of its own function
+                         map to its IR instruction, how many reproduce its test,
+                         agree?  (copies inlined into other functions are counted
+                         apart: they ran under those functions' tests)
+  src/correlate.py compare out/O0/report_rows.csv out/O3/report_rows.csv --out out
         opt_compare.csv  the report rows side by side for the two builds
-  correlate.py timing --ir-timing data/timing_dilithium.csv \
+  src/correlate.py timing --ir-timing data/timing_dilithium.csv \
                       --ours out/O0/timing_dilithium.csv [...] --report ... --out out
         timing_compare.csv  IR-level vs emulation seconds per function
+  src/correlate.py stats out/O0 out/O3 --out out
+        stats.csv  agreement with the report next to always-"no" and random-PC baselines
 """
 import argparse
 import csv
 import os
+import random
 import re
 import sys
 from collections import Counter, defaultdict
@@ -226,6 +231,75 @@ def cmd_timing(a):
         print(f"{len(both)} functions in both: IR-level {s_ir:.0f}s; ours (sequential-equivalent) {msg}")
 
 
+def _score(pairs):
+    """2x2 counts, agreement, the always-"no" baseline and Cohen's kappa."""
+    c = Counter(pairs)
+    tp, fn, fp, tn = c["yes", "yes"], c["yes", "no"], c["no", "yes"], c["no", "no"]
+    n = tp + fn + fp + tn
+    out = {"n": n, "tp": tp, "fn": fn, "fp": fp, "tn": tn}
+    if n:
+        po = (tp + tn) / n
+        pe = ((tp + fn) * (tp + fp) + (fp + tn) * (fn + tn)) / n ** 2
+        out.update(agree=tp + tn, always_no=fp + tn, agree_rate=round(po, 3), always_no_rate=round((fp + tn) / n, 3),
+                   precision=round(tp / (tp + fp), 3) if tp + fp else "", recall=round(tp / (tp + fn), 3) if tp + fn else "",
+                   kappa=round((po - pe) / (1 - pe), 3) if pe < 1 else "")
+    return out
+
+
+def cmd_stats(a):
+    """Report-row agreement of each build, next to trivial baselines."""
+    out = []
+    for d in a.dirs:
+        label = os.path.basename(os.path.abspath(d))
+        rows = list(csv.DictReader(open(os.path.join(d, "report_rows.csv"), newline="")))
+        faults = list(csv.DictReader(open(os.path.join(d, "machine_faults.csv"), newline="")))
+        dec = [r for r in rows if r["agree"] in ("yes", "no")]
+        sets = {"all rows": dec, "call skips (fnSkip)": [r for r in dec if r["model"] == "fnSkip"],
+                "value faults": [r for r in dec if r["model"] != "fnSkip"],
+                "without *uniform*": [r for r in dec if "uniform" not in r["function"]]}
+        sets.update({t: [r for r in dec if r["test"] == t] for t in TESTS})
+        for name, rs in sets.items():
+            out.append({"build": label, "set": name, **_score([(r["ir_detected"], r["mc_any"]) for r in rs])})
+        # one unit per (IR site, test): IR "yes" if any fault model there is "yes"
+        site = defaultdict(set)
+        for r in dec:
+            site[r["function"], r["ir_index"], r["test"]].add((r["ir_detected"], r["mc_any"]))
+        out.append({"build": label, "set": "IR sites",
+                    **_score([(max(i for i, _ in v), max(m for _, m in v)) for v in site.values()])})
+        # null: as many random executed PCs of the same function instead of the mapped ones
+        by_fn = defaultdict(list)
+        for f in faults:
+            by_fn[f["function"]].append(f)
+        rng, agree, kappa = random.Random(0), [], []
+        groups = defaultdict(list)
+        for r in dec:
+            groups[r["function"], r["pcs"], int(r["n_pcs"])].append(r)
+        for _ in range(a.draws):
+            pairs = []
+            for (fn, _, n), rs in groups.items():
+                pick = rng.sample(by_fn[fn], min(n, len(by_fn[fn])))
+                pairs += [(r["ir_detected"], "yes" if any(f[r["test"]] == "yes" for f in pick) else "no") for r in rs]
+            s = _score(pairs)
+            agree.append(s["agree"])
+            kappa.append(s["kappa"])
+        obs = _score([(r["ir_detected"], r["mc_any"]) for r in dec])
+        out.append({"build": label, "set": f"random PCs of the same function (mean of {a.draws})", "n": obs["n"],
+                    "agree": round(sum(agree) / len(agree), 1), "kappa": round(sum(kappa) / len(kappa), 3),
+                    "p_agree": round(sum(x >= obs["agree"] for x in agree) / len(agree), 4),
+                    "p_kappa": round(sum(x >= obs["kappa"] for x in kappa) / len(kappa), 4)})
+        yes = [r for r in rows if r["ir_detected"] == "yes"]
+        out.append({"build": label, "set": "all IR yes rows", "n": len(yes), "tp": sum(r["mc_any"] == "yes" for r in yes),
+                    **{"mc_" + k.replace(" ", "_"): v for k, v in Counter(r["mc_any"] for r in yes).items()}})
+    cols = []
+    for r in out:
+        cols += [k for k in r if k not in cols]
+    with open(os.path.join(a.out, "stats.csv"), "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        w.writerows(out)
+    print(f"{len(out)} rows -> {a.out}/stats.csv")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -243,8 +317,12 @@ def main(argv=None):
     t.add_argument("--ours", nargs="+", required=True, help="timing_dilithium.csv of each build")
     t.add_argument("--report", help="fault report, to count IR faults per function")
     t.add_argument("--out", required=True)
+    s = sub.add_parser("stats")
+    s.add_argument("dirs", nargs="+", help="output directories of `map` (label = directory name)")
+    s.add_argument("--out", required=True)
+    s.add_argument("--draws", type=int, default=2000)
     a = ap.parse_args(argv)
-    {"map": cmd_map, "compare": cmd_compare, "timing": cmd_timing}[a.cmd](a)
+    {"map": cmd_map, "compare": cmd_compare, "timing": cmd_timing, "stats": cmd_stats}[a.cmd](a)
 
 
 if __name__ == "__main__":

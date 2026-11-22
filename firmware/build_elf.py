@@ -19,9 +19,9 @@ IR-level study faulted, in-process with llvmlite (LLVM >= 20, ARM backend):
              writes <out>.relabel.ll (pass it as --ir).  The .text is checked to
              be identical to a build without relabelling.
 
-  python build_elf.py data/dilithium2.ll -O 0 --relabel -o build/dil2_O0.elf
-  python build_elf.py data/dilithium2.ll -O 3 --relabel -o build/dil2_O3.elf
-  python build_elf.py data/dilithium2.ll -O s --relabel -o build/dil2_Os.elf
+  python firmware/build_elf.py data/dilithium2.ll -O 0 --relabel -o build/dil2_O0.elf
+  python firmware/build_elf.py data/dilithium2.ll -O 3 --relabel -o build/dil2_O3.elf
+  python firmware/build_elf.py data/dilithium2.ll -O s --relabel -o build/dil2_Os.elf
 """
 import argparse
 import os
@@ -29,7 +29,7 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "src"))
 ARCH = ["-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]
 
 
